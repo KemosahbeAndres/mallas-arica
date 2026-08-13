@@ -6,6 +6,16 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Inter', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* SIGMA — tokens de marca (CLAUDE.md §2) */
+    --color-brand-red: #E53329;
+    --color-brand-red-ui: #CA1E1E;
+    --color-brand-red-dark: #A81818;
+    --color-ink: #211D1C;
+    --color-ink-soft: #3A3533;
+    --color-cream: #FAF7F0;
+    --color-cream-deep: #F3EAE1;
+    --color-line: #EAE1D8;
 }
