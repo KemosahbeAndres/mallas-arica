@@ -57,6 +57,16 @@ App móvil (Etapa 2) ──► /api/v1/* (Sanctum) ──► mismos Services
 
 **Regla no negociable:** toda la lógica de precio vive en `CotizacionCalculatorService`. Livewire lo llama como PHP plano; los controllers de API lo llaman igual. **Cero duplicación de fórmula.**
 
+**Almacenamiento de imágenes (cambio):** las fotografías y evidencias de los trabajos (`trabajo_fotos`) se almacenan en el **mismo contenedor de `sigma-app`** (filesystem local), no en Cloudflare R2. R2 queda reservado solo para la galería pública (`galeria_items`). Esto afecta el endpoint `POST /api/v1/trabajos/{id}/fotos`: ya no se emite presigned URL de R2, el archivo se sube directo al VPS.
+
+**Entorno de desarrollo:** se desarrolla en **Fedora**. Los comandos que deban ejecutarse en el host (fuera de un contenedor/sandbox, p. ej. para interactuar con el sistema gráfico o servicios del host) requieren `flatpak-spawn --host` como prefijo.
+
+**Dominios:**
+- Producción: `mallasarica.cl`
+- Desarrollo: `mallas.tinorte.cl` — el cambio de dominio a producción se hará más adelante, al desplegar.
+
+**Fase estática antes que CRM:** el MVP (Etapa 1) se construye con contenido **casi estático**, en páginas Livewire + Blade convencionales (sin editor de contenido, sin bloques dinámicos). El **CRM real se activa después** (ver §11) — no bloquear ni sobre-diseñar el Sprint 1–4 pensando en el editor de bloques; ese dinamismo se incorpora en una etapa posterior sin rehacer las páginas base si se respeta la separación de secciones del §4.1.
+
 ---
 
 ## 4. Etapa 1 — Landing + Cotizador (MVP)
@@ -180,6 +190,7 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 - VPS OpenCloud 4 GB / 2 vCPU. **Los builds Docker ocurren solo en GitHub Actions → GHCR.** Nunca en el VPS.
 - 2 contenedores por entorno: MariaDB + Laravel (Nginx + PHP-FPM vía supervisord).
 - R2 con dominio público para galería, detrás de Cloudflare CDN. Servir **WebP/AVIF responsivo**; el peso de imágenes es el único riesgo real de performance de esta landing.
+- Fotografías de trabajos (`trabajo_fotos`) se guardan en disco **dentro del contenedor `sigma-app`**, no en R2 (ver §3). Requiere volumen persistente y considerar en `backup-db.sh`/estrategia de backup un backup de archivos aparte.
 - `backup-db.sh` diario con rotación + `restore-db.sh` con dump previo de seguridad.
 
 **Migración desde Wix**
@@ -198,6 +209,7 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 | 3 | `CotizadorWizard` + `PanelPrecio` + persistencia de lead + handoff WhatsApp | Lead guardado aunque no se envíe el WhatsApp |
 | 4 | Galería (R2) + FAQ + SEO/schema + 301 | Sitemap indexable |
 | 5 | Panel admin: tarifas, leads, galería (Etapa 3 parcial) | El papá cambia un precio sin tocar código |
+| 5b | *(Etapa CRM, posterior)* Editor de páginas por bloques (ver §11) | Página editada desde el panel se refleja en el sitio sin deploy |
 | 6 | Deploy prod + monitoreo (Uptime Kuma) + 1 semana en paralelo con Wix | Corte de DNS |
 
 > Sprint 1 antes que cualquier pixel. Si la fórmula de precio cambia después de tener UI, se rehace la UI.
@@ -212,3 +224,28 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 4. **Metraje mínimo facturable** — asumido 2 ml.
 5. ¿Piscina cotiza o solo genera lead? — asumido *solo lead*.
 6. ¿Se reintroduce el abono Transbank en alguna etapa posterior, o el negocio se queda con pago en terreno?
+
+---
+
+## 10. Assets de diseño
+
+Todo en la carpeta `./diseño`:
+
+- `rediseño.pdf` — **guía de diseño oficial**, fuente de verdad para layout, tipografía y mockups (ver también §2).
+- `isologo.svg` / `isologo-b.svg` — **isologos oficiales** (versión color / versión b).
+- **Lockup horizontal:** a la derecha del isologo va el wordmark en dos líneas, ambas en mayúsculas: `MALLAS` (rojo, `--brand-red` o `--brand-red-ui`) sobre `ARICA` (negro, `--ink`).
+
+---
+
+## 11. Evolución a CRM (post-MVP)
+
+**Fase actual (Etapa 1):** contenido casi estático — páginas Livewire + Blade tradicionales, sin capa de edición. Prioridad es shippear el cotizador (§4) sin cargar complejidad de CMS.
+
+**Fase futura:** el panel admin (Sprint 5, §8) evoluciona a un **CRM completo**, que incluye:
+- Gestión de leads/cotizaciones, tarifas y galería (ya cubierto en Sprint 5).
+- **Editor de páginas por bloques avanzado**, al estilo **WordPress + Otter Blocks** (o equivalente): permite componer/editar secciones de la landing (hero, qué protegemos, FAQ, etc.) desde el panel sin tocar código ni requerir deploy.
+
+**Implicancias de diseño a tener en cuenta desde ya (sin implementar aún):**
+- Las secciones estáticas del §4.1 deben construirse como **componentes Blade/Livewire desacoplados y con props claras**, para que cada una pueda convertirse más adelante en un "bloque" editable sin reescritura completa.
+- El contenido "hardcodeado" en Sprint 2–4 (textos, orden de secciones, imágenes) es candidato a migrar a una tabla de tipo `paginas`/`bloques` (JSON de configuración por bloque) cuando se active el editor — no es necesario modelarla todavía, pero **evitar acoplar lógica de negocio a la maquetación estática** para que esa migración sea de datos, no de código.
+- El editor de bloques es una funcionalidad de la Etapa 3 (admin), posterior al MVP; no bloquea ni forma parte del criterio de cierre de los Sprints 1–4.
