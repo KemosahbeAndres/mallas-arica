@@ -3,7 +3,7 @@
         ['icono' => '👁', 'titulo' => 'Transparente', 'detalle' => 'Poliamida, casi invisible'],
         ['icono' => '💪', 'titulo' => '200 kg/m²', 'detalle' => 'Resistencia comprobada'],
         ['icono' => '☀️', 'titulo' => 'Filtro UV', 'detalle' => 'Resiste el sol de Arica'],
-        ['icono' => '⚡', 'titulo' => 'Mismo día', 'detalle' => 'Instalación rápida'],
+        ['icono' => '⚡', 'titulo' => 'Rápida', 'detalle' => 'Instalación puntual'],
     ];
 @endphp
 

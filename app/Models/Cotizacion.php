@@ -20,7 +20,7 @@ class Cotizacion extends Model
         'nombre',
         'telefono',
         'email',
-        'comuna',
+        'direccion',
         'canal',
         'estado',
         'total_min',

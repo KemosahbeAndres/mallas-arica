@@ -14,11 +14,15 @@
         ],
         [
             'pregunta' => '¿Cuánto se demoran en hacer el trabajo?',
-            'respuesta' => 'La mayoría de las instalaciones se realizan el mismo día de la visita, dependiendo de la complejidad y el número de espacios a cubrir.',
+            'respuesta' => 'La visita técnica para cotizar y la instalación son dos citas distintas: primero medimos y te confirmamos el precio, y luego agendamos un día y hora aparte para instalar. La instalación es rápida y llegamos puntuales a la hora acordada — si algo cambia, siempre te avisamos.',
         ],
         [
             'pregunta' => '¿El material es seguro?',
             'respuesta' => 'Sí, trabajamos con malla de monofilamento de poliamida certificada por el fabricante, con resistencia comprobada de más de 200 kg/m² y filtro UV.',
+        ],
+        [
+            'pregunta' => '¿Qué medios de pago aceptan?',
+            'respuesta' => 'Aceptamos efectivo, transferencia bancaria y tarjetas de débito y crédito (hasta 3 cuotas), directamente en terreno al finalizar la instalación.',
         ],
         [
             'pregunta' => '¿Dónde puedo obtener más información?',

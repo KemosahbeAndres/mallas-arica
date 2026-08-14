@@ -2,7 +2,7 @@
     $pasos = [
         ['numero' => 1, 'titulo' => 'Escríbenos', 'detalle' => 'Cuéntanos qué necesitas por WhatsApp, teléfono o el cotizador.'],
         ['numero' => 2, 'titulo' => 'Visita y medición', 'detalle' => 'Vamos a tu domicilio, medimos y verificamos que sea factible instalar.'],
-        ['numero' => 3, 'titulo' => 'Instalación', 'detalle' => 'Instalamos con malla certificada, normalmente el mismo día.'],
+        ['numero' => 3, 'titulo' => 'Instalación', 'detalle' => 'Agendamos día y hora, llegamos puntuales e instalamos con malla certificada de forma rápida.'],
         ['numero' => 4, 'titulo' => 'Tranquilidad', 'detalle' => 'Tu familia queda protegida con una solución segura y duradera.'],
     ];
 @endphp

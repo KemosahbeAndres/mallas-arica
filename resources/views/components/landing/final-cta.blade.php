@@ -4,7 +4,7 @@
             Protege tu hogar hoy mismo
         </h2>
         <p class="mt-4 text-lg text-white/85">
-            Escríbenos y coordina tu visita técnica gratuita. Medimos, cotizamos y muchas veces instalamos el mismo día.
+            Escríbenos y coordina tu visita técnica gratuita. Medimos, cotizamos y agendamos la instalación para que quede lista en una sola mañana.
         </p>
 
         <div class="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
