@@ -74,14 +74,20 @@ App móvil (Etapa 2) ──► /api/v1/* (Sanctum) ──► mismos Services
 ### 4.1 Secciones (orden del mockup)
 1. **Navbar** — Servicios · Cotizador · Galería · FAQ · [Escríbenos] (rojo)
 2. **Hero** — badge `🛡 Mallas de seguridad certificadas · Arica`, H1 con "tranquilidad" en rojo, 2 CTA (`Cotizar 30 segundos` / `Agendar visita`), 3 checks de confianza
-3. **Barra de atributos** — Transparente · 200 kg/m² · Filtro UV · Mismo día
+3. **Barra de atributos** — Transparente · 200 kg/m² · Filtro UV · Rápida
 4. **Qué protegemos** — grid 3×2 de los 6 tipos
 5. **Cómo trabajamos** — 4 pasos numerados
 6. **Cotizador** — split: formulario (izq, crema) + panel de precio (der, `--ink`, sticky)
 7. **Galería** — grid mosaico + "Ver más en WhatsApp →"
-8. **Nosotros** — texto + dirección Av. Diego Portales #1333 + teléfono
-9. **FAQ** — acordeón, 6 preguntas
+8. **Nosotros** — texto + dirección Av. Diego Portales #1333 + teléfono + medios de pago
+9. **FAQ** — acordeón, 7 preguntas (incluye medios de pago)
 10. **CTA final + Footer** — `--ink`
+
+> **Corrección de contenido (post-Sprint 3):** la **visita técnica** (medir y cotizar) y la **instalación** son dos citas distintas, agendadas por separado — nunca "el mismo día" el uno del otro.
+>
+> **No comprometer una duración de instalación en horas ni en "una mañana"** — cada trabajo es distinto y fijar un plazo es un riesgo comercial. El mensaje correcto es **"instalación rápida"** sin cuantificar, combinado con **confianza y puntualidad**: llegamos a la hora acordada, siempre respondemos. Evitar "mismo día" y evitar rangos de horas (ej. "3 a 5 horas") en cualquier copy nuevo.
+>
+> **Medios de pago (agregado post-Sprint 3):** se acepta efectivo, transferencia bancaria y tarjetas de débito/crédito hasta 3 cuotas, pagados en terreno al finalizar la instalación. Mencionado en Hero (check de confianza), Nosotros y FAQ. Sigue sin existir integración de pago online (Transbank queda fuera del MVP, ver §1 decisión #7).
 
 ### 4.2 Modelo de cálculo (el cambio crítico)
 
@@ -115,18 +121,49 @@ total_max = Σ subtotal_item(precio_ml_max)
 ```
 app/Livewire/
 ├── Cotizador/
-│   ├── CotizadorWizard.php      # estado, ítems, wire:model.live.debounce.400ms
-│   ├── ItemEspacio.php          # una fila: tipo + ml + altura + malla
-│   └── PanelPrecio.php          # rango, desglose, CTA WhatsApp (sticky)
+│   ├── CotizadorWizard.php      # estado, ítems (array), wire:model.live.debounce.400ms
+│   └── PanelPrecio.php          # hijo #[Reactive], rango, desglose, CTA WhatsApp (sticky)
 ├── GaleriaMosaico.php           # + lightbox Alpine
 └── LeadForm.php                 # honeypot + throttle
 ```
 
+> **Decisión de implementación (Sprint 3):** la fila de ítem (`ItemEspacio`) se implementa como **Blade component puro** (`resources/views/components/cotizador/item-espacio.blade.php`), no como componente Livewire independiente. Un Livewire real por fila obligaría a sincronizar estado entre componentes hijos y el wizard padre solo para un array editable — complejidad innecesaria en Livewire 3. El Blade component recibe el item y su índice como props y usa `wire:model` apuntando a `items.{index}.campo` directo en el estado del `CotizadorWizard`.
+
 - El acordeón de FAQ y el menú móvil son **Alpine puro**, sin roundtrip a servidor.
 - Tarifas vigentes cacheadas en Redis (`sigma:tarifas:v{n}`), invalidadas al guardar desde el admin → el cotizador **no toca la BD por tecla**.
 
-### 4.5 Handoff a WhatsApp (conversión principal)
-Al pulsar `Crear por WhatsApp`: se persiste la cotización (estado `borrador`), se genera `codigo` corto (`MA-7K3Q`) y se abre `wa.me` con mensaje prellenado que incluye el código. **El lead se guarda aunque el usuario nunca envíe el mensaje.**
+### 4.5 Datos del cliente y persistencia del lead
+
+> **Decisión (Sprint 3, ampliación post-cierre inicial):** el cotizador pide **condominio/dirección** (texto libre, opcional) en vez de `comuna`, y agrega **correo electrónico** (opcional). Objetivo: dejar registro completo del cliente y su cotización para hacer seguimiento comercial, no solo capturar el lead mínimo para WhatsApp.
+
+- Campos del formulario de contacto: `nombre` (requerido), `telefono` (requerido), `direccion` (opcional, reemplaza a `comuna`), `email` (opcional).
+- La cotización se persiste **siempre** al confirmar (estado `borrador`), independientemente de qué botón de conversión use el cliente después.
+- **Cambio de esquema:** en `cotizaciones`, la columna `comuna` se reemplaza por `direccion` (string nullable). `email` ya existía en el esquema base (§5) como nullable — se activa su captura en el formulario.
+
+### 4.6 Conversión: dos caminos, no uno
+
+Tras calcular la cotización, el cliente tiene **dos botones de conversión** (ya no solo WhatsApp):
+
+1. **`Crear por WhatsApp`**: persiste la cotización y abre `wa.me` con mensaje prellenado que incluye el **N° correlativo** de la cotización (`Cotizacion::numero`, ver §4.7). **El lead se guarda aunque el usuario nunca envíe el mensaje.**
+2. **`Descargar PDF`** (implementado, Sprint 3): persiste la cotización (comparte `persistirCotizacion()` con el flujo de WhatsApp en `CotizadorWizard` — sin duplicar lógica) y genera un PDF vía `barryvdh/laravel-dompdf` (`resources/views/pdf/cotizacion.blade.php`) con diseño de marca (ver §4.7).
+   - Ambos botones (`crearCotizacionYAbrirWhatsapp`, `crearCotizacionYDescargarPdf`) llaman a `persistirCotizacion()`, que valida `nombre`/`telefono`/`email` y aplica el honeypot antes de crear el registro.
+
+### 4.7 Diseño del PDF de cotización (implementado)
+
+Fuente de verdad: `./diseño/cotizacion-v2.pdf`. Layout tipo factura/comprobante:
+
+- **Header:** isologo + wordmark "Mallas Arica" (subtítulo "Instalación de mallas de protección · Arica") a la izquierda; badge rojo `COTIZACIÓN` a la derecha, con **N°** correlativo de 4 dígitos y **Fecha** debajo.
+- **Bloques EMPRESA / CLIENTE** lado a lado, fondo `--cream-deep`, etiqueta roja en mayúsculas (`EMPRESA`, `CLIENTE`):
+  - EMPRESA: razón social fija ("Mallas Arica"), RUT fijo, dirección fija (Av. Diego Portales #1333, Arica), teléfono y correo fijos de la empresa — **hardcodeado en la plantilla**, no viene de BD.
+  - CLIENTE: `nombre`, `direccion` (condominio/dirección del cliente), `telefono`, `email` de la cotización.
+- **Tabla de ítems** con header `--ink` (fondo negro, texto blanco): columnas `Descripción` | `P. unitario` | `Cant.` | `Subtotal`.
+  - **Decisión:** `P. unitario` = `precio_ml_max_snapshot × multiplicador_snapshot` del ítem (el techo del rango, no el mínimo) — el PDF es un documento formal que el cliente puede mostrar a terceros; comprometerse al mínimo arriesga tener que cobrar más tras la visita técnica sin respaldo escrito. `Cant.` = `metros_lineales`. `Subtotal` = `precio_unitario × cantidad` (recalculado en la vista, no usa `subtotal_max` directo, para que la aritmética de la línea cierre visualmente).
+  - `Descripción` compone: nombre del tipo de espacio + tipo de malla (si no es la estándar) + tramo de altura, ej. *"Malla de protección estándar — instalación en Ventana, hasta 1,5 m"*.
+  - Si `requiere_visita` es true para el ítem (altura +3m, >40ml, piscina), la línea muestra `Subtotal: A confirmar en visita técnica` en vez de un monto, y no entra en la suma de Neto.
+- **Totales:** `Neto` (suma subtotales, sin IVA) → `IVA (19%)` → `Total` en barra roja `--brand-red-ui` con texto blanco. El sitio ya declara "valores incluyen IVA" en el cotizador web (rango min-max); el PDF **desglosa** el IVA explícitamente porque el precio unitario ahí es fijo, no rango.
+- **Nota de vigencia:** franja con ícono de reloj, borde izquierdo rojo, fondo `--cream-deep`: *"Esta cotización tiene una vigencia de 10 días a contar de la fecha de emisión. Los valores están expresados en pesos chilenos (CLP) e incluyen IVA según se detalla."*
+- **Footer:** teléfono + correo de la empresa, centrado, gris.
+- **N° correlativo:** único identificador público de la cotización — se deriva del `id` autoincremental de `cotizaciones` formateado a 4 dígitos (accessor `Cotizacion::numero`, no es una secuencia separada). Se usa en el PDF, en el mensaje de WhatsApp y en la pantalla de confirmación del cotizador. **El antiguo código alfanumérico `MA-XXXX` fue eliminado** (columna `codigo` dropeada, ver migración `drop_codigo_from_cotizaciones_table`) — no reintroducirlo.
 
 ---
 
@@ -142,20 +179,25 @@ tarifas:         id, tipo_espacio_id, tramo_altura_id, precio_ml_min(int), preci
                  vigente_desde(date), vigente_hasta(nullable)
                  UNIQUE(tipo_espacio_id, tramo_altura_id, vigente_desde)
 
-// Transaccional
-cotizaciones:    id, uuid, codigo, nombre, telefono, email(null), comuna,
+// Transaccional — cotizaciones, cotizacion_items y visitas usan SoftDeletes (ver nota abajo)
+cotizaciones:    id, uuid, nombre, telefono, email(null), direccion(null),
                  canal(enum: web|whatsapp|telefono), estado(enum: borrador|contactado|
                  agendado|cerrado|perdido), total_min(int), total_max(int),
-                 requiere_visita(bool), utm_source, ip_hash, timestamps
+                 requiere_visita(bool), utm_source, ip_hash, deleted_at, timestamps
+                 // direccion reemplaza a comuna (v2.1, implementado): texto libre
+                 // "condominio/dirección", opcional. Ver migración rename_comuna_to_direccion.
+                 // columna `codigo` (MA-XXXX) eliminada (v2.2): el identificador público
+                 // es el N° correlativo derivado de `id` (accessor Cotizacion::numero, §4.7).
+                 // Ver migración drop_codigo_from_cotizaciones_table.
 
 cotizacion_items: id, cotizacion_id, tipo_espacio_id, tipo_malla_id, tramo_altura_id,
                   metros_lineales(decimal 6,2),
                   precio_ml_min_snapshot(int), precio_ml_max_snapshot(int),
                   multiplicador_snapshot(decimal 4,2),
-                  subtotal_min(int), subtotal_max(int)
+                  subtotal_min(int), subtotal_max(int), deleted_at
 
 visitas:         id, cotizacion_id, equipo_id(null), fecha_agendada, ventana_horaria,
-                 direccion, estado, notas
+                 direccion, estado, notas, deleted_at
 
 // Etapas 2–3
 trabajos:        id, cotizacion_id, equipo_id, medidas_finales(json), total_final(int),
@@ -166,7 +208,11 @@ consumos:        id, trabajo_id, malla_ml, cable_acero_ml, fijaciones(int), cost
 galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 ```
 
-**Índices:** `cotizaciones(estado, created_at)`, `cotizaciones(codigo)` UNIQUE, `trabajo_fotos(trabajo_id, tipo)`.
+**Índices:** `cotizaciones(estado, created_at)`, `trabajo_fotos(trabajo_id, tipo)`.
+
+> **Política de borrado (v2.2, implementado):** las tablas transaccionales — `cotizaciones`, `cotizacion_items`, `visitas` — usan `SoftDeletes` de Laravel (`deleted_at`). **Ningún registro de cliente se elimina físicamente**: son datos de seguimiento comercial y potencial evidencia de negocio, nunca deben desaparecer del todo. El modelo `Cotizacion` replica la cascada a mano en `booted()` (`static::deleting`) porque el `cascadeOnDelete()` de la FK no se dispara con soft deletes — al borrar una cotización, sus `items` y su `visita` también quedan soft-deleted.
+>
+> Los catálogos (`tipos_espacio`, `tipos_malla`, `tramos_altura`, `tarifas`) **no** llevan `SoftDeletes`: ya tienen su propio mecanismo de desactivación (`activo`, `vigente_hasta`) y duplicar el concepto sería redundante. Cuando se implemente el panel admin (Sprint 5), cualquier acción de "eliminar" sobre cotizaciones/visitas debe ser un soft delete (`->delete()` normal); reservar `forceDelete()` solo para tareas de mantenimiento explícitas fuera del flujo normal de negocio, nunca expuesto en la UI del cliente.
 
 ---
 
@@ -197,6 +243,17 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 1. Wix vivo hasta 1 semana de SIGMA estable en producción.
 2. Mapa de 301 (incluye `/page4` y los ítems de nav rotos).
 3. `LocalBusiness` + `FAQPage` schema.org, `sitemap.xml`, OG images por sección.
+
+### 7.1 Pipeline CI/CD (plan cargado, analizado — implementación en sprint futuro)
+
+Documento completo: `./plan-cicd.md`. Cubre build multi-stage (Dockerfile: composer → node/Vite → php-fpm-alpine), GitHub Actions (test → build/push a GHCR → deploy por SSH), orquestación en el VPS (`docker-compose.yml` + Traefik) y 15 edge cases resueltos (APP_KEY, volumen de storage, rollback por tag inmutable, mixed content tras el proxy, etc.). Es consistente con las decisiones ya congeladas en §7 (builds solo en Actions, 2 contenedores, R2 para galería, fotos de trabajos en disco del contenedor).
+
+**No implementar todavía** — queda para el sprint de despliegue (§8, Sprint 6). Antes de ejecutarlo hay que resolver:
+1. **Nombre real de la red Docker compartida** (`backend-shared` es provisional, el documento trae el comando de verificación en su §0.1).
+2. **Secrets de GitHub** (`VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_KEY`) y usuario `deploy` con acceso SSH + grupo `docker` en el VPS.
+3. **DB dedicada** `sigma_prod` + usuario propio en la MariaDB compartida (nunca root).
+4. Añadir `trustProxies` a `bootstrap/app.php` — sin esto Livewire genera URLs `http://` detrás de Traefik y rompe por mixed content (§4.4 del documento).
+5. Confirmar que el volumen `mallas-arica-storage` para fotos de instaladores entra en la estrategia de backup junto a `backup-db.sh` (ver §7 arriba).
 
 ---
 

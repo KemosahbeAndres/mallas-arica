@@ -6,8 +6,8 @@
         <a href="{{ url('/') }}" class="flex items-center gap-3">
             <x-icon.mark class="h-9 w-9 shrink-0" />
             <span class="flex flex-col leading-none font-extrabold tracking-tight uppercase">
-                <span class="text-brand-red-ui text-lg">Mallas</span>
-                <span class="text-ink text-lg">Arica</span>
+                <span class="text-brand-red-ui text-lg mb-0">Mallas</span>
+                <span class="text-ink text-lg mt-0">Arica</span>
             </span>
         </a>
 

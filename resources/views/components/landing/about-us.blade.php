@@ -23,6 +23,9 @@
                 Somos los únicos que instalamos con esta malla certificada directamente por el fabricante, un
                 material completamente seguro y resistente al clima de nuestra ciudad.
             </p>
+            <p class="text-ink-soft mt-4 text-lg leading-relaxed">
+                Somos de confianza: llegamos puntuales a la hora acordada y siempre respondemos tus mensajes.
+            </p>
 
             <dl class="border-line mt-8 grid grid-cols-1 gap-6 border-t pt-8 sm:grid-cols-2">
                 <div>
@@ -34,6 +37,10 @@
                     <dd class="text-ink mt-1 font-medium">
                         <a href="tel:+56986455205" class="hover:text-brand-red-ui">+56 9 8645 5205</a>
                     </dd>
+                </div>
+                <div class="sm:col-span-2">
+                    <dt class="text-ink-soft text-sm font-semibold">💳 Medios de pago</dt>
+                    <dd class="text-ink mt-1 font-medium">Efectivo, transferencia o tarjeta (débito y crédito hasta 3 cuotas)</dd>
                 </div>
             </dl>
         </div>

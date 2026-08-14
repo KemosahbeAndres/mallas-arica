@@ -40,13 +40,13 @@
 
             <ul class="mt-8 flex flex-col gap-3 text-sm text-white/70 sm:flex-row sm:gap-8">
                 <li class="flex items-center gap-2">
-                    <span class="text-brand-red-ui">✓</span> Instalación el mismo día
+                    <span class="text-brand-red-ui">✓</span> Instalación rápida y puntual
                 </li>
                 <li class="flex items-center gap-2">
                     <span class="text-brand-red-ui">✓</span> Material certificado
                 </li>
                 <li class="flex items-center gap-2">
-                    <span class="text-brand-red-ui">✓</span> Pago en terreno
+                    <span class="text-brand-red-ui">✓</span> Efectivo, transferencia o tarjeta
                 </li>
             </ul>
         </div>

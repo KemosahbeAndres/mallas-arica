@@ -4,7 +4,7 @@
     <x-landing.protection-grid />
     <x-landing.how-we-work />
 
-    {{-- Cotizador (sección 6) llega en el Sprint 3 --}}
+    <livewire:cotizador.cotizador-wizard />
 
     {{-- Galería (sección 7) llega en el Sprint 4 --}}
 
