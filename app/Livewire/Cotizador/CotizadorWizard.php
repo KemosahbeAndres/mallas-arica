@@ -109,7 +109,7 @@ class CotizadorWizard extends Component
         $this->numeroGenerado = $cotizacion->numero;
         $this->whatsappUrl = $this->construirUrlWhatsapp($cotizacion, (bool) $cotizacion->requiere_visita);
 
-        $this->js("window.open(".json_encode($this->whatsappUrl).", '_blank')");
+        $this->js('window.open('.json_encode($this->whatsappUrl).", '_blank')");
     }
 
     #[On('solicitar-descarga-pdf')]

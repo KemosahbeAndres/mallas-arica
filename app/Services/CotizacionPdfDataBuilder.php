@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Cotizacion;
 use App\Models\CotizacionItem;
+use Carbon\Carbon;
 
 class CotizacionPdfDataBuilder
 {
@@ -49,7 +50,7 @@ class CotizacionPdfDataBuilder
         ];
     }
 
-    private function formatearFecha(\Carbon\Carbon $fecha): string
+    private function formatearFecha(Carbon $fecha): string
     {
         return "{$fecha->day} de ".self::MESES[$fecha->month]." de {$fecha->year}";
     }

@@ -233,8 +233,8 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 
 ## 7. Infraestructura y despliegue (ya operativo)
 
-- VPS OpenCloud 4 GB / 2 vCPU. **Los builds Docker ocurren solo en GitHub Actions → GHCR.** Nunca en el VPS.
-- 2 contenedores por entorno: MariaDB + Laravel (Nginx + PHP-FPM vía supervisord).
+- VPS OpenCloud 4 GB / 2 vCPU, **Ubuntu 22.04.5 LTS**. **Los builds Docker ocurren solo en GitHub Actions → GHCR.** Nunca en el VPS.
+- 3 contenedores por entorno, todos exclusivos de SIGMA (no compartidos con otros proyectos del VPS): Laravel (Nginx + PHP-FPM vía supervisord) + MariaDB + Redis. Cada uno con volumen propio; MariaDB/Redis solo alcanzables desde la red interna `backend`, sin puertos publicados al host (ver §7.1).
 - R2 con dominio público para galería, detrás de Cloudflare CDN. Servir **WebP/AVIF responsivo**; el peso de imágenes es el único riesgo real de performance de esta landing.
 - Fotografías de trabajos (`trabajo_fotos`) se guardan en disco **dentro del contenedor `sigma-app`**, no en R2 (ver §3). Requiere volumen persistente y considerar en `backup-db.sh`/estrategia de backup un backup de archivos aparte.
 - `backup-db.sh` diario con rotación + `restore-db.sh` con dump previo de seguridad.
@@ -244,16 +244,39 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 2. Mapa de 301 (incluye `/page4` y los ítems de nav rotos).
 3. `LocalBusiness` + `FAQPage` schema.org, `sitemap.xml`, OG images por sección.
 
-### 7.1 Pipeline CI/CD (plan cargado, analizado — implementación en sprint futuro)
+### 7.1 Pipeline CI/CD (implementado — pendiente solo configuración externa)
 
-Documento completo: `./plan-cicd.md`. Cubre build multi-stage (Dockerfile: composer → node/Vite → php-fpm-alpine), GitHub Actions (test → build/push a GHCR → deploy por SSH), orquestación en el VPS (`docker-compose.yml` + Traefik) y 15 edge cases resueltos (APP_KEY, volumen de storage, rollback por tag inmutable, mixed content tras el proxy, etc.). Es consistente con las decisiones ya congeladas en §7 (builds solo en Actions, 2 contenedores, R2 para galería, fotos de trabajos en disco del contenedor).
+Documento de referencia completo: `./plan-cicd.md` (nota: ese documento asumía MariaDB/Redis como instancias **compartidas preexistentes** en el VPS — decisión descartada, ver abajo). **Decisiones fijadas:**
+- **PHP 8.4** en el runtime de producción y en el job de test de Actions. `composer.json` declara `^8.2`, pero el `composer.lock` real quedó resuelto (generado con el PHP 8.5 del entorno de desarrollo, sin `platform.php` fijado en `composer.json`) con `symfony/clock`, `symfony/string`, `symfony/event-dispatcher` y otros en versión 8.1.x, que exigen PHP `>= 8.4.1`. Bajar el runtime a 8.2 rompe `composer dump-autoload` en el build (`platform_check.php` aborta). Si en algún momento se quiere soportar 8.2 real, hay que fijar `"config": {"platform": {"php": "8.2.0"}}` en `composer.json` y correr `composer update` para forzar el lock a versiones de Symfony 7.x — cambio de dependencias real, no solo de infraestructura, y no se hizo aquí.
+- **MariaDB y Redis son contenedores propios de `deploy/docker-compose.yml`, no instancias compartidas con otros proyectos del VPS.** Cada uno con su volumen (`mallas-arica-mariadb-data`, `mallas-arica-redis-data`), healthcheck, y sin `ports:` publicados — solo alcanzables desde la red interna `backend`. `app` usa `depends_on: condition: service_healthy` sobre ambos.
+- **Red `backend`:** ya no es externa — la crea el propio `docker-compose.yml` de SIGMA como red interna (`mallas-arica-backend`). La variable `BACKEND_NETWORK` del `.env` fue eliminada (ya no aplica). `proxy` (Traefik) sigue siendo externa, sin cambios.
+- **`DB_ROOT_PASSWORD`** es una variable nueva en `.env` — solo la usa el entrypoint oficial de la imagen `mariadb` para inicializar la BD/usuario la primera vez; la app nunca se conecta como root (sigue usando `DB_USERNAME=sigma_prod`).
 
-**No implementar todavía** — queda para el sprint de despliegue (§8, Sprint 6). Antes de ejecutarlo hay que resolver:
-1. **Nombre real de la red Docker compartida** (`backend-shared` es provisional, el documento trae el comando de verificación en su §0.1).
-2. **Secrets de GitHub** (`VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_KEY`) y usuario `deploy` con acceso SSH + grupo `docker` en el VPS.
-3. **DB dedicada** `sigma_prod` + usuario propio en la MariaDB compartida (nunca root).
-4. Añadir `trustProxies` a `bootstrap/app.php` — sin esto Livewire genera URLs `http://` detrás de Traefik y rompe por mixed content (§4.4 del documento).
-5. Confirmar que el volumen `mallas-arica-storage` para fotos de instaladores entra en la estrategia de backup junto a `backup-db.sh` (ver §7 arriba).
+**Archivos creados en el repositorio:**
+```
+docker/prod/Dockerfile             # build multi-stage: composer → node/Vite → php:8.4-fpm-alpine
+docker/prod/nginx.conf
+docker/prod/php.ini
+docker/prod/php-fpm-pool.conf
+docker/prod/supervisord.conf       # php-fpm + nginx + schedule:work
+docker/prod/entrypoint.sh          # valida APP_KEY/APP_DEBUG, espera MariaDB/Redis, cachea en runtime
+.dockerignore
+.github/workflows/deploy.yml       # test → build+push GHCR → deploy SSH
+deploy/docker-compose.yml          # referencia para copiar a /opt/mallas-arica/ en el VPS
+                                    # servicios: app + mariadb + redis (todos propios de SIGMA)
+deploy/.env.production.example     # plantilla del .env de producción
+```
+
+`bootstrap/app.php` ya tiene `trustProxies(at: '*', headers: ...)` — sin esto Livewire generaría URLs `http://` detrás de Traefik (mixed content).
+
+**Validado localmente antes del primer push:**
+- `php artisan route:cache` sin errores (no hay closures en las rutas).
+- `./vendor/bin/pint --test` en verde (se corrigieron 7 issues de estilo preexistentes de sprints anteriores).
+- `php artisan test` verde (26 tests) tras el fix de Pint.
+- Build de la imagen Docker completo sin errores (multi-stage: vendor → assets → runtime), validado con Podman localmente.
+- El Dockerfile instala Composer vía el instalador oficial (`getcomposer.org/installer`) directamente en el stage runtime, en vez de copiar el binario nativo del stage `vendor` (imagen `composer:2`) — ese binario está compilado contra una versión de PHP más nueva que el runtime en algunos casos y falla en tiempo de ejecución con "Invalid" / platform check.
+
+**Pendiente — configuración externa al repo, no requiere más código:** generar `VPS_SSH_KEY` y cargar los 4 secrets en GitHub, crear `/opt/mallas-arica/` en el VPS con el `.env` real (incluye ahora `DB_ROOT_PASSWORD`), emitir el certificado TLS (Traefik + certresolver `myle`, automático vía ACME al primer request — no requiere paso manual si el DNS ya apunta al VPS). Ya **no** hace falta verificar/crear una red compartida ni una DB en una instancia preexistente: `docker compose up -d` crea MariaDB, Redis, la red y los volúmenes desde cero.
 
 ---
 
