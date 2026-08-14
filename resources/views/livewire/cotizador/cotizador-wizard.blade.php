@@ -10,11 +10,11 @@
             </p>
         </div>
 
-        @if ($codigoGenerado)
+        @if ($numeroGenerado)
             <div class="border-brand-red-ui/30 bg-brand-red-ui/5 mt-10 rounded-2xl border p-6">
                 <p class="text-ink font-semibold">
-                    ¡Listo! Tu cotización quedó guardada con el código
-                    <span class="text-brand-red-ui">{{ $codigoGenerado }}</span>.
+                    ¡Listo! Tu cotización quedó guardada con el N°
+                    <span class="text-brand-red-ui">{{ $numeroGenerado }}</span>.
                 </p>
                 <p class="text-ink-soft mt-1 text-sm">
                     Deberías haber sido redirigido a WhatsApp. Si no ocurrió,

@@ -67,8 +67,7 @@ class CotizadorWizardTest extends TestCase
             ->set('items.0.tipo_espacio_id', $this->ventana->id)
             ->set('items.0.tramo_altura_id', $this->tramoHasta1_5->id)
             ->set('items.0.metros_lineales', 3.5)
-            ->call('crearCotizacionYAbrirWhatsapp')
-            ->assertSet('codigoGenerado', fn ($codigo) => str_starts_with($codigo, 'MA-'));
+            ->call('crearCotizacionYAbrirWhatsapp');
 
         $this->assertDatabaseCount('cotizaciones', 1);
 
@@ -78,6 +77,20 @@ class CotizadorWizardTest extends TestCase
         $this->assertSame('Condominio Las Torres, depto 302', $cotizacion->direccion);
         $this->assertSame('juan@example.com', $cotizacion->email);
         $this->assertSame(1, $cotizacion->items()->count());
+    }
+
+    public function test_el_numero_generado_es_el_correlativo_del_id(): void
+    {
+        Livewire::test(CotizadorWizard::class)
+            ->set('nombre', 'Juan Pérez')
+            ->set('telefono', '+56912345678')
+            ->set('items.0.tipo_espacio_id', $this->ventana->id)
+            ->set('items.0.tramo_altura_id', $this->tramoHasta1_5->id)
+            ->set('items.0.metros_lineales', 3.5)
+            ->call('crearCotizacionYAbrirWhatsapp')
+            ->assertSet('numeroGenerado', fn ($numero) => $numero === Cotizacion::first()->numero);
+
+        $this->assertSame(str_pad((string) Cotizacion::first()->id, 4, '0', STR_PAD_LEFT), Cotizacion::first()->numero);
     }
 
     public function test_direccion_y_email_son_opcionales(): void

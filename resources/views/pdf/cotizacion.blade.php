@@ -22,7 +22,7 @@
             padding: 6px 14px;
             border-radius: 999px;
         }
-        .numero-label { font-size: 9px; color: #3A3533; margin-top: 10px; }
+        .numero-label { font-size: 9px; color: #3A3533; margin-top: 10px; margin-bottom: 2px; }
         .numero { font-size: 20px; font-weight: bold; color: #CA1E1E; }
         .fecha { font-size: 10px; margin-top: 4px; }
 
@@ -99,12 +99,12 @@
                         </td>
                     </tr>
                 </table>
+                <p class="fecha">Fecha: {{ $fecha }}</p>
             </td>
             <td style="width: 40%; text-align: right;">
                 <span class="badge">COTIZACIÓN</span>
                 <p class="numero-label">N°</p>
                 <p class="numero">{{ $numero }}</p>
-                <p class="fecha">Fecha: {{ $fecha }}</p>
             </td>
         </tr>
     </table>

@@ -39,7 +39,7 @@ class CotizacionPdfDataBuilder
         $iva = (int) round($neto * self::IVA_TASA);
 
         return [
-            'numero' => str_pad((string) $cotizacion->id, 4, '0', STR_PAD_LEFT),
+            'numero' => $cotizacion->numero,
             'fecha' => $this->formatearFecha($cotizacion->created_at),
             'empresa' => self::EMPRESA,
             'lineas' => $lineas,

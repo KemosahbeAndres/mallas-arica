@@ -53,7 +53,6 @@ class CotizacionPdfDataBuilderTest extends TestCase
     public function test_calcula_el_numero_correlativo_a_partir_del_id(): void
     {
         $cotizacion = Cotizacion::create([
-            'codigo' => 'MA-0001',
             'nombre' => 'Juan Pérez',
             'telefono' => '+56912345678',
             'canal' => 'web',
@@ -68,7 +67,6 @@ class CotizacionPdfDataBuilderTest extends TestCase
     public function test_precio_unitario_usa_el_maximo_del_rango_con_multiplicador(): void
     {
         $cotizacion = Cotizacion::create([
-            'codigo' => 'MA-0002',
             'nombre' => 'Juan Pérez',
             'telefono' => '+56912345678',
             'canal' => 'web',
@@ -102,7 +100,6 @@ class CotizacionPdfDataBuilderTest extends TestCase
     public function test_item_sin_tarifa_snapshot_queda_marcado_como_pendiente_y_no_suma_al_neto(): void
     {
         $cotizacion = Cotizacion::create([
-            'codigo' => 'MA-0003',
             'nombre' => 'Juan Pérez',
             'telefono' => '+56912345678',
             'canal' => 'web',

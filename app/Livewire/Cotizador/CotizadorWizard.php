@@ -9,7 +9,6 @@ use App\Models\TramoAltura;
 use App\Services\CotizacionCalculatorService;
 use App\Services\CotizacionPdfDataBuilder;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -30,7 +29,7 @@ class CotizadorWizard extends Component
     // Honeypot anti-spam: campo invisible que un bot rellenaría.
     public string $sitioWeb = '';
 
-    public ?string $codigoGenerado = null;
+    public ?string $numeroGenerado = null;
 
     public ?string $whatsappUrl = null;
 
@@ -107,7 +106,7 @@ class CotizadorWizard extends Component
             return;
         }
 
-        $this->codigoGenerado = $cotizacion->codigo;
+        $this->numeroGenerado = $cotizacion->numero;
         $this->whatsappUrl = $this->construirUrlWhatsapp($cotizacion, (bool) $cotizacion->requiere_visita);
 
         $this->js("window.open(".json_encode($this->whatsappUrl).", '_blank')");
@@ -122,7 +121,7 @@ class CotizadorWizard extends Component
             return;
         }
 
-        $this->codigoGenerado = $cotizacion->codigo;
+        $this->numeroGenerado = $cotizacion->numero;
 
         $datos = app(CotizacionPdfDataBuilder::class)->construir($cotizacion);
 
@@ -133,7 +132,7 @@ class CotizadorWizard extends Component
 
         return response()->streamDownload(
             fn () => print ($pdf->output()),
-            "cotizacion-{$cotizacion->codigo}.pdf",
+            "cotizacion-{$cotizacion->numero}.pdf",
         );
     }
 
@@ -159,7 +158,6 @@ class CotizadorWizard extends Component
         $resultado = app(CotizacionCalculatorService::class)->calcularCotizacion($itemsValidos);
 
         $cotizacion = Cotizacion::create([
-            'codigo' => $this->generarCodigo(),
             'nombre' => $this->nombre,
             'telefono' => $this->telefono,
             'email' => $this->email ?: null,
@@ -189,24 +187,15 @@ class CotizadorWizard extends Component
         return $cotizacion;
     }
 
-    private function generarCodigo(): string
-    {
-        do {
-            $codigo = 'MA-'.Str::upper(Str::random(4));
-        } while (Cotizacion::where('codigo', $codigo)->exists());
-
-        return $codigo;
-    }
-
     private function construirUrlWhatsapp(Cotizacion $cotizacion, bool $requiereVisita): string
     {
-        $numero = '56986455205';
+        $telefonoEmpresa = '56986455205';
 
         $mensaje = $requiereVisita
-            ? "Hola, quiero coordinar una visita técnica para mi cotización {$cotizacion->codigo}. Mi nombre es {$this->nombre}."
-            : "Hola, quiero avanzar con mi cotización {$cotizacion->codigo} (rango \${$this->numeroFormateado($cotizacion->total_min)} - \${$this->numeroFormateado($cotizacion->total_max)}). Mi nombre es {$this->nombre}.";
+            ? "Hola, quiero coordinar una visita técnica para mi cotización N° {$cotizacion->numero}. Mi nombre es {$this->nombre}."
+            : "Hola, quiero avanzar con mi cotización N° {$cotizacion->numero} (rango \${$this->numeroFormateado($cotizacion->total_min)} - \${$this->numeroFormateado($cotizacion->total_max)}). Mi nombre es {$this->nombre}.";
 
-        return "https://wa.me/{$numero}?text=".rawurlencode($mensaje);
+        return "https://wa.me/{$telefonoEmpresa}?text=".rawurlencode($mensaje);
     }
 
     private function numeroFormateado(int $valor): string
