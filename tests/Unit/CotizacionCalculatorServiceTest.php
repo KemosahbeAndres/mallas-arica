@@ -34,7 +34,7 @@ class CotizacionCalculatorServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new CotizacionCalculatorService();
+        $this->service = new CotizacionCalculatorService;
 
         $this->ventana = TipoEspacio::create([
             'slug' => 'ventana',

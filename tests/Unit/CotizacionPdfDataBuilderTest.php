@@ -26,7 +26,7 @@ class CotizacionPdfDataBuilderTest extends TestCase
     {
         parent::setUp();
 
-        $this->builder = new CotizacionPdfDataBuilder();
+        $this->builder = new CotizacionPdfDataBuilder;
 
         $this->ventana = TipoEspacio::create([
             'slug' => 'ventana',

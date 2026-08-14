@@ -10,6 +10,5 @@ class CotizacionCalculoResultado
         public readonly int $totalMin,
         public readonly int $totalMax,
         public readonly bool $requiereVisita,
-    ) {
-    }
+    ) {}
 }

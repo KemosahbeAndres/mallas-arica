@@ -17,6 +17,5 @@ class ItemCalculoResultado
         public readonly int $subtotalMin = 0,
         public readonly int $subtotalMax = 0,
         public readonly ?string $motivoLead = null,
-    ) {
-    }
+    ) {}
 }

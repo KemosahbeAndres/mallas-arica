@@ -1,0 +1,38 @@
+# Secretos — crítico: nunca deben entrar a la imagen
+.env
+.env.*
+!.env.example
+
+# Artefactos regenerados dentro del build
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+
+# Estado local
+/storage/*.key
+/storage/pail
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+/storage/app/public/*
+/bootstrap/cache/*
+
+# Herramientas y control de versiones
+.git
+.github
+.gitignore
+.idea
+.vscode
+.fleet
+.phpunit.result.cache
+.phpunit.cache
+docker-compose.yml
+docker-compose.override.yml
+*.md
+!composer.json
+
+# Tests: no se necesitan en la imagen de producción
+/tests

@@ -92,7 +92,7 @@ class CotizacionCalculatorService
     }
 
     /**
-     * @param array<int, array{tipo_espacio_id: int, tipo_malla_id: ?int, tramo_altura_id: ?int, metros_lineales: float}> $items
+     * @param  array<int, array{tipo_espacio_id: int, tipo_malla_id: ?int, tramo_altura_id: ?int, metros_lineales: float}>  $items
      */
     public function calcularCotizacion(array $items): CotizacionCalculoResultado
     {
