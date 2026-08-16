@@ -164,6 +164,15 @@ jobs:
           envs: IMAGE_TAG
           script: |
             set -euo pipefail
+
+            # Traer los archivos de infraestructura más recientes del repo
+            # (docker-compose.yml, etc.) — corre en el VPS host, no en un
+            # contenedor. El .env real vive solo en /opt/mallas-arica/.env
+            # y nunca se toca ni se pisa desde el repo clonado.
+            cd /opt/mallas-arica/repo
+            git pull --ff-only
+            cp deploy/docker-compose.yml /opt/mallas-arica/docker-compose.yml
+
             cd /opt/mallas-arica
 
             # Guardar el tag actual para poder revertir.
