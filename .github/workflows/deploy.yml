@@ -69,6 +69,18 @@ jobs:
       - name: Instalar dependencias
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar dependencias de Node
+        run: npm ci
+
+      - name: Compilar assets (Vite)
+        run: npm run build
+
       - name: Preparar entorno de test
         run: |
           cp .env.example .env
