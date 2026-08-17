@@ -105,6 +105,8 @@
                             <label for="sitio_web">Sitio web</label>
                             <input id="sitio_web" type="text" wire:model="sitioWeb" tabindex="-1" autocomplete="off">
                         </div>
+
+                        @error('throttle') <p class="text-brand-red-ui mt-2 text-sm">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>

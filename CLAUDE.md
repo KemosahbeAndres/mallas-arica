@@ -123,11 +123,12 @@ app/Livewire/
 ├── Cotizador/
 │   ├── CotizadorWizard.php      # estado, ítems (array), wire:model.live.debounce.400ms
 │   └── PanelPrecio.php          # hijo #[Reactive], rango, desglose, CTA WhatsApp (sticky)
-├── GaleriaMosaico.php           # + lightbox Alpine
-└── LeadForm.php                 # honeypot + throttle
+└── GaleriaMosaico.php           # + lightbox Alpine — pendiente, Sprint 4
 ```
 
 > **Decisión de implementación (Sprint 3):** la fila de ítem (`ItemEspacio`) se implementa como **Blade component puro** (`resources/views/components/cotizador/item-espacio.blade.php`), no como componente Livewire independiente. Un Livewire real por fila obligaría a sincronizar estado entre componentes hijos y el wizard padre solo para un array editable — complejidad innecesaria en Livewire 3. El Blade component recibe el item y su índice como props y usa `wire:model` apuntando a `items.{index}.campo` directo en el estado del `CotizadorWizard`.
+
+> **Decisión de implementación (Sprint 3, cierre):** `LeadForm` tampoco se implementó como componente Livewire separado — honeypot y throttle viven dentro de `CotizadorWizard::persistirCotizacion()`, junto a la validación de `nombre`/`telefono`/`email` que ya usan ambos botones de conversión. El throttle es un `RateLimiter` de Laravel por IP (`cotizador:{ip}`, 5 intentos / 10 minutos); al superarlo, `persistirCotizacion()` devuelve `null` y agrega el error de validación `throttle`, mostrado en el formulario junto al honeypot.
 
 - El acordeón de FAQ y el menú móvil son **Alpine puro**, sin roundtrip a servidor.
 - Tarifas vigentes cacheadas en Redis (`appmallas:tarifas:v{n}`), invalidadas al guardar desde el admin → el cotizador **no toca la BD por tecla**.
@@ -290,7 +291,7 @@ deploy/.env.production.example     # plantilla del .env de producción
 |---|---|---|
 | 1 | Migraciones + seeders de catálogos + `CotizacionCalculatorService` + **tests unitarios de los 8 edge cases** | `php artisan test` verde, sin UI |
 | 2 | Layout, tokens Tailwind, secciones estáticas 1–5 y 8–10 | Lighthouse ≥ 95 mobile |
-| 3 | `CotizadorWizard` + `PanelPrecio` + persistencia de lead + handoff WhatsApp | Lead guardado aunque no se envíe el WhatsApp |
+| 3 | ✅ `CotizadorWizard` + `PanelPrecio` + persistencia de lead + handoff WhatsApp + descarga PDF + honeypot/throttle | Lead guardado aunque no se envíe el WhatsApp — **cerrado** |
 | 4 | Galería (R2) + FAQ + SEO/schema + 301 | Sitemap indexable |
 | 5 | Panel admin: tarifas, leads, galería (Etapa 3 parcial) | El papá cambia un precio sin tocar código |
 | 5b | *(Etapa CRM, posterior)* Editor de páginas por bloques (ver §11) | Página editada desde el panel se refleja en el sitio sin deploy |

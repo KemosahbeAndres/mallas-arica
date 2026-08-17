@@ -178,6 +178,32 @@ class CotizadorWizardTest extends TestCase
         $this->assertDatabaseCount('cotizaciones', 0);
     }
 
+    public function test_throttle_bloquea_tras_exceder_el_maximo_de_intentos(): void
+    {
+        for ($i = 0; $i < 5; $i++) {
+            Livewire::test(CotizadorWizard::class)
+                ->set('nombre', 'Juan Pérez')
+                ->set('telefono', '+56912345678')
+                ->set('items.0.tipo_espacio_id', $this->ventana->id)
+                ->set('items.0.tramo_altura_id', $this->tramoHasta1_5->id)
+                ->set('items.0.metros_lineales', 3.5)
+                ->call('crearCotizacionYAbrirWhatsapp');
+        }
+
+        $this->assertDatabaseCount('cotizaciones', 5);
+
+        Livewire::test(CotizadorWizard::class)
+            ->set('nombre', 'Juan Pérez')
+            ->set('telefono', '+56912345678')
+            ->set('items.0.tipo_espacio_id', $this->ventana->id)
+            ->set('items.0.tramo_altura_id', $this->tramoHasta1_5->id)
+            ->set('items.0.metros_lineales', 3.5)
+            ->call('crearCotizacionYAbrirWhatsapp')
+            ->assertHasErrors(['throttle']);
+
+        $this->assertDatabaseCount('cotizaciones', 5);
+    }
+
     public function test_agregar_y_quitar_items(): void
     {
         Livewire::test(CotizadorWizard::class)

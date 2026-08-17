@@ -9,6 +9,7 @@ use App\Models\TramoAltura;
 use App\Services\CotizacionCalculatorService;
 use App\Services\CotizacionPdfDataBuilder;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -32,6 +33,11 @@ class CotizadorWizard extends Component
     public ?string $numeroGenerado = null;
 
     public ?string $whatsappUrl = null;
+
+    // Máximo de cotizaciones que una misma IP puede crear en la ventana de throttle.
+    private const THROTTLE_MAX_INTENTOS = 5;
+
+    private const THROTTLE_VENTANA_MINUTOS = 10;
 
     public function mount(): void
     {
@@ -148,6 +154,16 @@ class CotizadorWizard extends Component
         if (filled($this->sitioWeb)) {
             return null;
         }
+
+        $throttleKey = 'cotizador:'.request()->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::THROTTLE_MAX_INTENTOS)) {
+            $this->addError('throttle', 'Demasiadas cotizaciones seguidas. Espera unos minutos e intenta de nuevo.');
+
+            return null;
+        }
+
+        RateLimiter::hit($throttleKey, self::THROTTLE_VENTANA_MINUTOS * 60);
 
         $itemsValidos = $this->itemsValidos();
 
