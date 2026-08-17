@@ -1,5 +1,5 @@
-# SIGMA v2 — Plan de Ejecución
-**Sistema Integral de Gestión Mallas Arica** · Reemplaza a `plan_para_claude.md` (v1)
+# Mallas Arica v2 — Plan de Ejecución
+**Sistema Integral de Gestión Mallas Arica** (nombre operativo actual: **mallas-arica**, identificador de infraestructura `appmallas`) · Reemplaza a `plan_para_claude.md` (v1)
 
 ---
 
@@ -47,7 +47,7 @@
 
 ```
 Cliente ──► Traefik (TLS: certresolver "myle")
-              └─► sigma-app  (Nginx + PHP-FPM vía supervisord, límite 1 GB)
+              └─► mallas-arica-app  (Nginx + PHP-FPM vía supervisord, límite 1 GB)
                     ├─► MariaDB compartida (DB lógica propia, límite ~1.28 GB)
                     ├─► Redis compartido (índices 0–1)
                     └─► Cloudflare R2 (galería pública + fotos de instaladores)
@@ -57,7 +57,7 @@ App móvil (Etapa 2) ──► /api/v1/* (Sanctum) ──► mismos Services
 
 **Regla no negociable:** toda la lógica de precio vive en `CotizacionCalculatorService`. Livewire lo llama como PHP plano; los controllers de API lo llaman igual. **Cero duplicación de fórmula.**
 
-**Almacenamiento de imágenes (cambio):** las fotografías y evidencias de los trabajos (`trabajo_fotos`) se almacenan en el **mismo contenedor de `sigma-app`** (filesystem local), no en Cloudflare R2. R2 queda reservado solo para la galería pública (`galeria_items`). Esto afecta el endpoint `POST /api/v1/trabajos/{id}/fotos`: ya no se emite presigned URL de R2, el archivo se sube directo al VPS.
+**Almacenamiento de imágenes (cambio):** las fotografías y evidencias de los trabajos (`trabajo_fotos`) se almacenan en el **mismo contenedor de `mallas-arica-app`** (filesystem local), no en Cloudflare R2. R2 queda reservado solo para la galería pública (`galeria_items`). Esto afecta el endpoint `POST /api/v1/trabajos/{id}/fotos`: ya no se emite presigned URL de R2, el archivo se sube directo al VPS.
 
 **Entorno de desarrollo:** se desarrolla en **Fedora**. Los comandos que deban ejecutarse en el host (fuera de un contenedor/sandbox, p. ej. para interactuar con el sistema gráfico o servicios del host) requieren `flatpak-spawn --host` como prefijo.
 
@@ -130,7 +130,7 @@ app/Livewire/
 > **Decisión de implementación (Sprint 3):** la fila de ítem (`ItemEspacio`) se implementa como **Blade component puro** (`resources/views/components/cotizador/item-espacio.blade.php`), no como componente Livewire independiente. Un Livewire real por fila obligaría a sincronizar estado entre componentes hijos y el wizard padre solo para un array editable — complejidad innecesaria en Livewire 3. El Blade component recibe el item y su índice como props y usa `wire:model` apuntando a `items.{index}.campo` directo en el estado del `CotizadorWizard`.
 
 - El acordeón de FAQ y el menú móvil son **Alpine puro**, sin roundtrip a servidor.
-- Tarifas vigentes cacheadas en Redis (`sigma:tarifas:v{n}`), invalidadas al guardar desde el admin → el cotizador **no toca la BD por tecla**.
+- Tarifas vigentes cacheadas en Redis (`appmallas:tarifas:v{n}`), invalidadas al guardar desde el admin → el cotizador **no toca la BD por tecla**.
 
 ### 4.5 Datos del cliente y persistencia del lead
 
@@ -236,11 +236,11 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 - VPS OpenCloud 4 GB / 2 vCPU, **Ubuntu 22.04.5 LTS**. **Los builds Docker ocurren solo en GitHub Actions → GHCR.** Nunca en el VPS.
 - **1 contenedor por entorno**: Laravel (Nginx + PHP-FPM vía supervisord). MariaDB y Redis son **instancias compartidas del VPS**, gestionadas por el repositorio `vpsa-infra` (`/opt/infra/data`), alcanzables por la red externa `backend-shared` con los aliases `mariadb` y `redis`. Sin puertos publicados al host.
 - R2 con dominio público para galería, detrás de Cloudflare CDN. Servir **WebP/AVIF responsivo**; el peso de imágenes es el único riesgo real de performance de esta landing.
-- Fotografías de trabajos (`trabajo_fotos`) se guardan en disco **dentro del contenedor `sigma-app`**, no en R2 (ver §3). Requiere volumen persistente y considerar en `backup-db.sh`/estrategia de backup un backup de archivos aparte.
-- Backups gestionados por infraestructura: `/opt/infra/scripts/backup-app.sh sigma` produce **un `.sql.gz` por base** (`sigma\_%`) y **un `.jsonl.gz` por índice de Redis** (export lógico del prefijo `sigma:`), en `/var/backups/vps-apps/sigma/`. Cron diario a las 03:15 con retención de 14 días y monitor Push en Uptime Kuma. Restauración: `/opt/infra/scripts/restore-app.sh` (hace dump de seguridad previo).
+- Fotografías de trabajos (`trabajo_fotos`) se guardan en disco **dentro del contenedor `mallas-arica-app`**, no en R2 (ver §3). Requiere volumen persistente y considerar en `backup-db.sh`/estrategia de backup un backup de archivos aparte.
+- Backups gestionados por infraestructura: `/opt/infra/scripts/backup-app.sh appmallas` produce **un `.sql.gz` por base** (`appmallas\_%`) y **un `.jsonl.gz` por índice de Redis** (export lógico del prefijo `appmallas:`), en `/var/backups/vps-apps/appmallas/`. Cron diario a las 03:15 con retención de 14 días y monitor Push en Uptime Kuma. Restauración: `/opt/infra/scripts/restore-app.sh` (hace dump de seguridad previo).
 
 **Migración desde Wix**
-1. Wix vivo hasta 1 semana de SIGMA estable en producción.
+1. Wix vivo hasta 1 semana de Mallas Arica estable en producción.
 2. Mapa de 301 (incluye `/page4` y los ítems de nav rotos).
 3. `LocalBusiness` + `FAQPage` schema.org, `sitemap.xml`, OG images por sección.
 
@@ -248,13 +248,13 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 
 Documento de referencia completo: `./plan-cicd.md` (nota: ese documento asumía MariaDB/Redis como instancias **compartidas preexistentes** en el VPS — decisión descartada, ver abajo). **Decisiones fijadas:**
 - **PHP 8.4** en el runtime de producción y en el job de test de Actions. `composer.json` declara `^8.2`, pero el `composer.lock` real quedó resuelto (generado con el PHP 8.5 del entorno de desarrollo, sin `platform.php` fijado en `composer.json`) con `symfony/clock`, `symfony/string`, `symfony/event-dispatcher` y otros en versión 8.1.x, que exigen PHP `>= 8.4.1`. Bajar el runtime a 8.2 rompe `composer dump-autoload` en el build (`platform_check.php` aborta). Si en algún momento se quiere soportar 8.2 real, hay que fijar `"config": {"platform": {"php": "8.2.0"}}` en `composer.json` y correr `composer update` para forzar el lock a versiones de Symfony 7.x — cambio de dependencias real, no solo de infraestructura, y no se hizo aquí.
-- **MariaDB y Redis son instancias compartidas multi-tenant del VPS**, definidas en `vpsa-infra` (`/opt/infra/data/docker-compose.yml`). SIGMA solo aporta el contenedor `mallas-arica-app`. Decisión tomada para alojar varias aplicaciones en 4 GB de RAM sin duplicar motores de datos. **Esto aplica solo a producción** — en desarrollo local se sigue usando el `docker-compose.yml` de la raíz del repo con contenedores propios (`sigma-mariadb-dev`, `sigma-redis-dev`).
-- **Aislamiento por inquilino:** base `sigma_prod` con `GRANT` sobre `` `sigma\_%`.* `` (el `\_` escapado es imprescindible: sin él `_` es comodín LIKE) y `MAX_USER_CONNECTIONS 20`. En Redis, usuario ACL `sigma` restringido al patrón `~sigma:*`, con `FLUSHALL` denegado y `FLUSHDB` permitido — este último lo necesita `Illuminate\Cache\RedisStore::flush()`, que ignora el prefijo.
-- **`REDIS_PREFIX=sigma:` es obligatorio en el `.env`.** Sin él, Laravel usa `<app_name>_database_`, ninguna clave coincide con el ACL y la aplicación falla entera con `NOPERM`.
+- **MariaDB y Redis son instancias compartidas multi-tenant del VPS**, definidas en `vpsa-infra` (`/opt/infra/data/docker-compose.yml`). Mallas Arica solo aporta el contenedor `mallas-arica-app`. Decisión tomada para alojar varias aplicaciones en 4 GB de RAM sin duplicar motores de datos. **Esto aplica solo a producción** — en desarrollo local se sigue usando el `docker-compose.yml` de la raíz del repo con contenedores propios (`mallas-arica-mariadb-dev`, `mallas-arica-redis-dev`).
+- **Aislamiento por inquilino:** base `appmallas_prod` con `GRANT` sobre `` `appmallas\_%`.* `` (el `\_` escapado es imprescindible: sin él `_` es comodín LIKE) y `MAX_USER_CONNECTIONS 20`. En Redis, usuario ACL `appmallas` restringido al patrón `~appmallas:*`, con `FLUSHALL` denegado y `FLUSHDB` permitido — este último lo necesita `Illuminate\Cache\RedisStore::flush()`, que ignora el prefijo.
+- **`REDIS_PREFIX=appmallas:` es obligatorio en el `.env`.** Sin él, Laravel usa `<app_name>_database_`, ninguna clave coincide con el ACL y la aplicación falla entera con `NOPERM`.
 - **Red `backend`:** externa, `backend-shared`, creada por el stack de infraestructura. El despliegue aborta con mensaje explícito si no existe (guard en `deploy.yml`).
-- **`DB_ROOT_PASSWORD` eliminada** del `.env` de SIGMA: la contraseña de root vive ahora solo en `/opt/infra/.env` y la app nunca la usó.
+- **`DB_ROOT_PASSWORD` eliminada** del `.env` de Mallas Arica: la contraseña de root vive ahora solo en `/opt/infra/.env` y la app nunca la usó.
 
-**Repositorio de infraestructura:** `vpsa-infra` (privado), desplegado en `/opt/infra`. Contiene el stack de borde (Traefik, Portainer, Uptime Kuma, Dozzle) y el de datos compartidos (MariaDB, Redis), más los scripts de provisión y backup por aplicación. SIGMA está registrada en `apps/sigma.conf`. Cualquier cambio de credenciales, red o motor de datos se hace ahí, no aquí.
+**Repositorio de infraestructura:** `vpsa-infra` (privado), desplegado en `/opt/infra`. Contiene el stack de borde (Traefik, Portainer, Uptime Kuma, Dozzle) y el de datos compartidos (MariaDB, Redis), más los scripts de provisión y backup por aplicación. Mallas Arica está registrada en `apps/appmallas.conf`. Cualquier cambio de credenciales, red o motor de datos se hace ahí, no aquí.
 
 **Archivos creados en el repositorio:**
 ```
@@ -280,7 +280,7 @@ deploy/.env.production.example     # plantilla del .env de producción
 - Build de la imagen Docker completo sin errores (multi-stage: vendor → assets → runtime), validado con Podman localmente.
 - El Dockerfile instala Composer vía el instalador oficial (`getcomposer.org/installer`) directamente en el stage runtime, en vez de copiar el binario nativo del stage `vendor` (imagen `composer:2`) — ese binario está compilado contra una versión de PHP más nueva que el runtime en algunos casos y falla en tiempo de ejecución con "Invalid" / platform check.
 
-**Pendiente — configuración externa al repo, no requiere más código:** generar `VPS_SSH_KEY` y cargar los 4 secrets en GitHub, completar el prerrequisito bloqueante en `vpsa-infra` (stack `data/` con `shared-mariadb`/`shared-redis` arriba, `provision-app.sh sigma prod` ejecutado), crear `/opt/mallas-arica/` en el VPS con el `.env` real (credenciales de `provision-app.sh`, sin `DB_ROOT_PASSWORD`), emitir el certificado TLS (Traefik + certresolver `myle`, automático vía ACME al primer request — no requiere paso manual si el DNS ya apunta al VPS). La red `backend-shared`, la base `sigma_prod` y el usuario ACL de Redis los crea `vpsa-infra`, no `docker compose up` de SIGMA.
+**Pendiente — configuración externa al repo, no requiere más código:** generar `VPS_SSH_KEY` y cargar los 4 secrets en GitHub, completar el prerrequisito bloqueante en `vpsa-infra` (stack `data/` con `shared-mariadb`/`shared-redis` arriba, `provision-app.sh appmallas prod` ejecutado), crear `/opt/mallas-arica/` en el VPS con el `.env` real (credenciales de `provision-app.sh`, sin `DB_ROOT_PASSWORD`), emitir el certificado TLS (Traefik + certresolver `myle`, automático vía ACME al primer request — no requiere paso manual si el DNS ya apunta al VPS). La red `backend-shared`, la base `appmallas_prod` y el usuario ACL de Redis los crea `vpsa-infra`, no `docker compose up` de Mallas Arica.
 
 ---
 

@@ -27,8 +27,8 @@ jobs:
       mariadb:
         image: mariadb:11
         env:
-          MARIADB_DATABASE: sigma_test
-          MARIADB_USER: sigma
+          MARIADB_DATABASE: appmallas_test
+          MARIADB_USER: appmallas
           MARIADB_PASSWORD: secret
           MARIADB_ROOT_PASSWORD: root
         ports:
@@ -95,8 +95,8 @@ jobs:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
-          DB_DATABASE: sigma_test
-          DB_USERNAME: sigma
+          DB_DATABASE: appmallas_test
+          DB_USERNAME: appmallas
           DB_PASSWORD: secret
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: 6379

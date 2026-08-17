@@ -1,12 +1,12 @@
 #!/bin/sh
-# Entrypoint de producción de SIGMA.
+# Entrypoint de producción de Mallas Arica.
 # Responsabilidades: validar entorno, esperar dependencias, cachear.
 # NO corre migraciones: eso es un paso explícito del pipeline de deploy,
 # para que un fallo de migración sea visible y no un reinicio en bucle.
 
 set -e
 
-echo "[entrypoint] SIGMA ${APP_VERSION:-dev} — arrancando"
+echo "[entrypoint] Mallas Arica ${APP_VERSION:-dev} — arrancando"
 
 # --- 1. Validación de APP_KEY (aborto explícito, nunca regeneración) ---
 # Regenerar la clave invalidaría sesiones y cualquier campo cifrado en BD.

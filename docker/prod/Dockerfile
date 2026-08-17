@@ -62,8 +62,8 @@ WORKDIR /var/www/html
 
 # --- Configuración de servicios ---
 COPY docker/prod/nginx.conf        /etc/nginx/nginx.conf
-COPY docker/prod/php.ini           /usr/local/etc/php/conf.d/99-sigma.ini
-COPY docker/prod/php-fpm-pool.conf /usr/local/etc/php-fpm.d/zz-sigma.conf
+COPY docker/prod/php.ini           /usr/local/etc/php/conf.d/99-mallas-arica.ini
+COPY docker/prod/php-fpm-pool.conf /usr/local/etc/php-fpm.d/zz-mallas-arica.conf
 COPY docker/prod/supervisord.conf  /etc/supervisor/supervisord.conf
 COPY docker/prod/entrypoint.sh     /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint

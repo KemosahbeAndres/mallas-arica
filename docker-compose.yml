@@ -1,12 +1,12 @@
 services:
   mariadb:
     image: docker.io/library/mariadb:11
-    container_name: sigma-mariadb-dev
+    container_name: mallas-arica-mariadb-dev
     restart: unless-stopped
     environment:
       MARIADB_DATABASE: mallas_arica
-      MARIADB_USER: sigma
-      MARIADB_PASSWORD: sigma
+      MARIADB_USER: mallas_arica
+      MARIADB_PASSWORD: mallas_arica
       MARIADB_ROOT_PASSWORD: root
     ports:
       - "3306:3306"
@@ -15,7 +15,7 @@ services:
 
   redis:
     image: docker.io/library/redis:7-alpine
-    container_name: sigma-redis-dev
+    container_name: mallas-arica-redis-dev
     restart: unless-stopped
     ports:
       - "6379:6379"

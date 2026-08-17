@@ -1,10 +1,10 @@
-# SIGMA — producción.
+# Mallas Arica — producción.
 # Este stack levanta ÚNICAMENTE el contenedor de la aplicación.
 # MariaDB y Redis son instancias COMPARTIDAS gestionadas por el repositorio
 # `vpsa-infra` en /opt/infra/data, alcanzables por la red externa
 # `backend-shared` con los aliases `mariadb` y `redis`.
-# Aislamiento: base `sigma_prod` + usuario `sigma` (MariaDB); usuario ACL
-# `sigma` limitado al patrón de claves `sigma:*` (Redis).
+# Aislamiento: base `appmallas_prod` + usuario `appmallas` (MariaDB); usuario ACL
+# `appmallas` limitado al patrón de claves `appmallas:*` (Redis).
 # Las imágenes NUNCA se construyen aquí: se traen de GHCR.
 #
 # Este archivo vive en el repositorio como referencia (deploy/docker-compose.yml)
