@@ -234,10 +234,10 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 ## 7. Infraestructura y despliegue (ya operativo)
 
 - VPS OpenCloud 4 GB / 2 vCPU, **Ubuntu 22.04.5 LTS**. **Los builds Docker ocurren solo en GitHub Actions → GHCR.** Nunca en el VPS.
-- 3 contenedores por entorno, todos exclusivos de SIGMA (no compartidos con otros proyectos del VPS): Laravel (Nginx + PHP-FPM vía supervisord) + MariaDB + Redis. Cada uno con volumen propio; MariaDB/Redis solo alcanzables desde la red interna `backend`, sin puertos publicados al host (ver §7.1).
+- **1 contenedor por entorno**: Laravel (Nginx + PHP-FPM vía supervisord). MariaDB y Redis son **instancias compartidas del VPS**, gestionadas por el repositorio `vpsa-infra` (`/opt/infra/data`), alcanzables por la red externa `backend-shared` con los aliases `mariadb` y `redis`. Sin puertos publicados al host.
 - R2 con dominio público para galería, detrás de Cloudflare CDN. Servir **WebP/AVIF responsivo**; el peso de imágenes es el único riesgo real de performance de esta landing.
 - Fotografías de trabajos (`trabajo_fotos`) se guardan en disco **dentro del contenedor `sigma-app`**, no en R2 (ver §3). Requiere volumen persistente y considerar en `backup-db.sh`/estrategia de backup un backup de archivos aparte.
-- `backup-db.sh` diario con rotación + `restore-db.sh` con dump previo de seguridad.
+- Backups gestionados por infraestructura: `/opt/infra/scripts/backup-app.sh sigma` produce **un `.sql.gz` por base** (`sigma\_%`) y **un `.jsonl.gz` por índice de Redis** (export lógico del prefijo `sigma:`), en `/var/backups/vps-apps/sigma/`. Cron diario a las 03:15 con retención de 14 días y monitor Push en Uptime Kuma. Restauración: `/opt/infra/scripts/restore-app.sh` (hace dump de seguridad previo).
 
 **Migración desde Wix**
 1. Wix vivo hasta 1 semana de SIGMA estable en producción.
@@ -248,9 +248,13 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 
 Documento de referencia completo: `./plan-cicd.md` (nota: ese documento asumía MariaDB/Redis como instancias **compartidas preexistentes** en el VPS — decisión descartada, ver abajo). **Decisiones fijadas:**
 - **PHP 8.4** en el runtime de producción y en el job de test de Actions. `composer.json` declara `^8.2`, pero el `composer.lock` real quedó resuelto (generado con el PHP 8.5 del entorno de desarrollo, sin `platform.php` fijado en `composer.json`) con `symfony/clock`, `symfony/string`, `symfony/event-dispatcher` y otros en versión 8.1.x, que exigen PHP `>= 8.4.1`. Bajar el runtime a 8.2 rompe `composer dump-autoload` en el build (`platform_check.php` aborta). Si en algún momento se quiere soportar 8.2 real, hay que fijar `"config": {"platform": {"php": "8.2.0"}}` en `composer.json` y correr `composer update` para forzar el lock a versiones de Symfony 7.x — cambio de dependencias real, no solo de infraestructura, y no se hizo aquí.
-- **MariaDB y Redis son contenedores propios de `deploy/docker-compose.yml`, no instancias compartidas con otros proyectos del VPS.** Cada uno con su volumen (`mallas-arica-mariadb-data`, `mallas-arica-redis-data`), healthcheck, y sin `ports:` publicados — solo alcanzables desde la red interna `backend`. `app` usa `depends_on: condition: service_healthy` sobre ambos.
-- **Red `backend`:** ya no es externa — la crea el propio `docker-compose.yml` de SIGMA como red interna (`mallas-arica-backend`). La variable `BACKEND_NETWORK` del `.env` fue eliminada (ya no aplica). `proxy` (Traefik) sigue siendo externa, sin cambios.
-- **`DB_ROOT_PASSWORD`** es una variable nueva en `.env` — solo la usa el entrypoint oficial de la imagen `mariadb` para inicializar la BD/usuario la primera vez; la app nunca se conecta como root (sigue usando `DB_USERNAME=sigma_prod`).
+- **MariaDB y Redis son instancias compartidas multi-tenant del VPS**, definidas en `vpsa-infra` (`/opt/infra/data/docker-compose.yml`). SIGMA solo aporta el contenedor `mallas-arica-app`. Decisión tomada para alojar varias aplicaciones en 4 GB de RAM sin duplicar motores de datos. **Esto aplica solo a producción** — en desarrollo local se sigue usando el `docker-compose.yml` de la raíz del repo con contenedores propios (`sigma-mariadb-dev`, `sigma-redis-dev`).
+- **Aislamiento por inquilino:** base `sigma_prod` con `GRANT` sobre `` `sigma\_%`.* `` (el `\_` escapado es imprescindible: sin él `_` es comodín LIKE) y `MAX_USER_CONNECTIONS 20`. En Redis, usuario ACL `sigma` restringido al patrón `~sigma:*`, con `FLUSHALL` denegado y `FLUSHDB` permitido — este último lo necesita `Illuminate\Cache\RedisStore::flush()`, que ignora el prefijo.
+- **`REDIS_PREFIX=sigma:` es obligatorio en el `.env`.** Sin él, Laravel usa `<app_name>_database_`, ninguna clave coincide con el ACL y la aplicación falla entera con `NOPERM`.
+- **Red `backend`:** externa, `backend-shared`, creada por el stack de infraestructura. El despliegue aborta con mensaje explícito si no existe (guard en `deploy.yml`).
+- **`DB_ROOT_PASSWORD` eliminada** del `.env` de SIGMA: la contraseña de root vive ahora solo en `/opt/infra/.env` y la app nunca la usó.
+
+**Repositorio de infraestructura:** `vpsa-infra` (privado), desplegado en `/opt/infra`. Contiene el stack de borde (Traefik, Portainer, Uptime Kuma, Dozzle) y el de datos compartidos (MariaDB, Redis), más los scripts de provisión y backup por aplicación. SIGMA está registrada en `apps/sigma.conf`. Cualquier cambio de credenciales, red o motor de datos se hace ahí, no aquí.
 
 **Archivos creados en el repositorio:**
 ```
@@ -263,7 +267,7 @@ docker/prod/entrypoint.sh          # valida APP_KEY/APP_DEBUG, espera MariaDB/Re
 .dockerignore
 .github/workflows/deploy.yml       # test → build+push GHCR → deploy SSH
 deploy/docker-compose.yml          # referencia para copiar a /opt/mallas-arica/ en el VPS
-                                    # servicios: app + mariadb + redis (todos propios de SIGMA)
+                                    # servicio único: app (datos en el stack compartido)
 deploy/.env.production.example     # plantilla del .env de producción
 ```
 
@@ -276,7 +280,7 @@ deploy/.env.production.example     # plantilla del .env de producción
 - Build de la imagen Docker completo sin errores (multi-stage: vendor → assets → runtime), validado con Podman localmente.
 - El Dockerfile instala Composer vía el instalador oficial (`getcomposer.org/installer`) directamente en el stage runtime, en vez de copiar el binario nativo del stage `vendor` (imagen `composer:2`) — ese binario está compilado contra una versión de PHP más nueva que el runtime en algunos casos y falla en tiempo de ejecución con "Invalid" / platform check.
 
-**Pendiente — configuración externa al repo, no requiere más código:** generar `VPS_SSH_KEY` y cargar los 4 secrets en GitHub, crear `/opt/mallas-arica/` en el VPS con el `.env` real (incluye ahora `DB_ROOT_PASSWORD`), emitir el certificado TLS (Traefik + certresolver `myle`, automático vía ACME al primer request — no requiere paso manual si el DNS ya apunta al VPS). Ya **no** hace falta verificar/crear una red compartida ni una DB en una instancia preexistente: `docker compose up -d` crea MariaDB, Redis, la red y los volúmenes desde cero.
+**Pendiente — configuración externa al repo, no requiere más código:** generar `VPS_SSH_KEY` y cargar los 4 secrets en GitHub, completar el prerrequisito bloqueante en `vpsa-infra` (stack `data/` con `shared-mariadb`/`shared-redis` arriba, `provision-app.sh sigma prod` ejecutado), crear `/opt/mallas-arica/` en el VPS con el `.env` real (credenciales de `provision-app.sh`, sin `DB_ROOT_PASSWORD`), emitir el certificado TLS (Traefik + certresolver `myle`, automático vía ACME al primer request — no requiere paso manual si el DNS ya apunta al VPS). La red `backend-shared`, la base `sigma_prod` y el usuario ACL de Redis los crea `vpsa-infra`, no `docker compose up` de SIGMA.
 
 ---
 

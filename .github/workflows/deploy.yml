@@ -187,6 +187,23 @@ jobs:
 
             cd /opt/mallas-arica
 
+            # --- Guard: dependencias externas de infraestructura ---
+            # Fallar aquí, con mensaje claro, en vez de disparar un rollback
+            # que no arregla nada.
+            for net in proxy backend-shared; do
+              docker network inspect "$net" >/dev/null 2>&1 || {
+                echo "::error::La red '$net' no existe. Levanta /opt/infra antes de desplegar."
+                exit 1
+              }
+            done
+
+            for svc in shared-mariadb shared-redis; do
+              [ "$(docker inspect -f '{{.State.Running}}' "$svc" 2>/dev/null)" = "true" ] || {
+                echo "::error::El contenedor '$svc' no está corriendo. Revisa /opt/infra/data."
+                exit 1
+              }
+            done
+
             # Guardar el tag actual para poder revertir.
             PREV_TAG=$(grep '^IMAGE_TAG=' .env | cut -d= -f2)
             echo "Tag anterior: ${PREV_TAG} → nuevo: ${IMAGE_TAG}"

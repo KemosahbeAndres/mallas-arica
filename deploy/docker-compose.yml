@@ -1,8 +1,11 @@
 # SIGMA — producción.
-# MariaDB y Redis son EXCLUSIVOS de este stack (no compartidos con otros
-# proyectos del VPS): cada uno con su propio volumen, solo accesibles en
-# la red interna `backend`. Las imágenes de la app NUNCA se construyen
-# aquí: se traen de GHCR.
+# Este stack levanta ÚNICAMENTE el contenedor de la aplicación.
+# MariaDB y Redis son instancias COMPARTIDAS gestionadas por el repositorio
+# `vpsa-infra` en /opt/infra/data, alcanzables por la red externa
+# `backend-shared` con los aliases `mariadb` y `redis`.
+# Aislamiento: base `sigma_prod` + usuario `sigma` (MariaDB); usuario ACL
+# `sigma` limitado al patrón de claves `sigma:*` (Redis).
+# Las imágenes NUNCA se construyen aquí: se traen de GHCR.
 #
 # Este archivo vive en el repositorio como referencia (deploy/docker-compose.yml)
 # pero se COPIA a mano a /opt/mallas-arica/docker-compose.yml en el VPS — ver
@@ -22,12 +25,6 @@ services:
     # Todo el entorno vive fuera de la imagen.
     env_file:
       - .env
-
-    depends_on:
-      mariadb:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
 
     volumes:
       # Único estado persistente propio de la app: fotos de trabajos y adjuntos.
@@ -70,14 +67,6 @@ services:
       - "traefik.http.routers.mallas-arica.service=mallas-arica"
       - "traefik.http.routers.mallas-arica.middlewares=mallas-arica-headers"
 
-      # --- Redirección HTTP → HTTPS ---
-      # Eliminar si ya existe redirección global en la config estática de Traefik.
-      - "traefik.http.routers.mallas-arica-http.rule=Host(`${APP_DOMAIN}`)"
-      - "traefik.http.routers.mallas-arica-http.entrypoints=web"
-      - "traefik.http.routers.mallas-arica-http.middlewares=mallas-arica-redirect"
-      - "traefik.http.middlewares.mallas-arica-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.mallas-arica-redirect.redirectscheme.permanent=true"
-
       # --- Cabeceras de seguridad ---
       # NO añadir stsPreload hasta estar en el dominio definitivo.
       - "traefik.http.middlewares.mallas-arica-headers.headers.stsSeconds=31536000"
@@ -93,86 +82,16 @@ services:
       # Watchtower no debe tocar este contenedor: el deploy es explícito.
       - "com.centurylinklabs.watchtower.enable=false"
 
-  mariadb:
-    image: mariadb:11
-    container_name: mallas-arica-mariadb
-    restart: unless-stopped
-
-    environment:
-      MARIADB_DATABASE: ${DB_DATABASE:-sigma_prod}
-      MARIADB_USER: ${DB_USERNAME:-sigma_prod}
-      MARIADB_PASSWORD: ${DB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MARIADB_AUTO_UPGRADE: 1
-
-    # Sin `ports:` — solo alcanzable desde `backend`. Nunca exponer al host.
-    networks:
-      - backend
-
-    volumes:
-      - mallas-arica-mariadb-data:/var/lib/mysql
-
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  redis:
-    image: redis:7-alpine
-    container_name: mallas-arica-redis
-    restart: unless-stopped
-    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
-
-    # Sin `ports:` — solo alcanzable desde `backend`.
-    networks:
-      - backend
-
-    volumes:
-      - mallas-arica-redis-data:/data
-
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
 volumes:
   mallas-arica-storage:
     name: mallas-arica-storage
-  mallas-arica-mariadb-data:
-    name: mallas-arica-mariadb-data
-  mallas-arica-redis-data:
-    name: mallas-arica-redis-data
 
 networks:
   proxy:
     external: true
     name: proxy
-  # Interna: la crea este mismo stack, no depende de otro proyecto del VPS.
+  # Externa: la crea el stack de infraestructura (/opt/infra).
+  # Da acceso a shared-mariadb (alias `mariadb`) y shared-redis (alias `redis`).
   backend:
-    name: mallas-arica-backend
+    external: true
+    name: backend-shared
