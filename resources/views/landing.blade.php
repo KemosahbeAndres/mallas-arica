@@ -6,7 +6,7 @@
 
     <livewire:cotizador.cotizador-wizard />
 
-    {{-- Galería (sección 7) llega en el Sprint 4 --}}
+    <livewire:galeria-mosaico />
 
     <x-landing.about-us />
     <x-landing.faq />

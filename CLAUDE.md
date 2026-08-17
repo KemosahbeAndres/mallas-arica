@@ -14,7 +14,9 @@
 | 5 | 2 tipos de espacio (Balcón, Ventana) | **6 tipos**: Ventana, Balcón, Terraza, Escalera, Mascotas, Piscina | Medio |
 | 6 | Sin variantes de material | **2 tipos de malla**: Estándar / Reforzada mascotas (1 mm, rombo 1,5 cm) | Medio |
 | 7 | Abono de reserva online (Transbank) al agendar | **Eliminado del MVP.** Conversión = handoff a WhatsApp + agendar visita gratuita. Transbank queda como *badge* de confianza (pago en terreno) | **Alto — quita integración de pagos del MVP** |
-| 8 | Galería estática | Galería administrable desde Etapa 3, imágenes en R2 | Bajo |
+| 8 | Galería estática | Galería administrable desde Etapa 3, imágenes en filesystem local (ver §1 nota) | Bajo |
+
+> **Cambio de infraestructura (Sprint 4, implementado):** Cloudflare R2 fue **descartado por completo** — nunca se contrataron credenciales y el volumen de imágenes (galería pública + fotos de instaladores) es lo bastante bajo para no justificar un servicio externo. Tanto `galeria_items` como `trabajo_fotos` usan el filesystem local del contenedor `mallas-arica-app` (disco `public` de Laravel, `storage/app/public`), servido vía el symlink `public/storage`. Esto reemplaza cualquier mención a R2 en este documento — tratarlas como decisión descartada, no vigente.
 
 > **Decisión #7 es la que más acelera el MVP**: sacar la pasarela de pago elimina integración, conciliación, reembolsos y estados de pago del Sprint 1.
 
@@ -50,14 +52,14 @@ Cliente ──► Traefik (TLS: certresolver "myle")
               └─► mallas-arica-app  (Nginx + PHP-FPM vía supervisord, límite 1 GB)
                     ├─► MariaDB compartida (DB lógica propia, límite ~1.28 GB)
                     ├─► Redis compartido (índices 0–1)
-                    └─► Cloudflare R2 (galería pública + fotos de instaladores)
+                    └─► Filesystem local (galería pública + fotos de instaladores)
 
 App móvil (Etapa 2) ──► /api/v1/* (Sanctum) ──► mismos Services
 ```
 
 **Regla no negociable:** toda la lógica de precio vive en `CotizacionCalculatorService`. Livewire lo llama como PHP plano; los controllers de API lo llaman igual. **Cero duplicación de fórmula.**
 
-**Almacenamiento de imágenes (cambio):** las fotografías y evidencias de los trabajos (`trabajo_fotos`) se almacenan en el **mismo contenedor de `mallas-arica-app`** (filesystem local), no en Cloudflare R2. R2 queda reservado solo para la galería pública (`galeria_items`). Esto afecta el endpoint `POST /api/v1/trabajos/{id}/fotos`: ya no se emite presigned URL de R2, el archivo se sube directo al VPS.
+**Almacenamiento de imágenes (implementado, Sprint 4):** tanto las fotografías y evidencias de los trabajos (`trabajo_fotos`) como la galería pública (`galeria_items`) se almacenan en el **mismo contenedor de `mallas-arica-app`** (filesystem local, disco `public` de Laravel — `storage/app/public`, servido vía `public/storage`). No se usa ningún servicio externo de almacenamiento: el endpoint `POST /api/v1/trabajos/{id}/fotos` sube el archivo directo al VPS, sin presigned URL.
 
 **Entorno de desarrollo:** se desarrolla en **Fedora**. Los comandos que deban ejecutarse en el host (fuera de un contenedor/sandbox, p. ej. para interactuar con el sistema gráfico o servicios del host) requieren `flatpak-spawn --host` como prefijo.
 
@@ -166,6 +168,25 @@ Fuente de verdad: `./diseño/cotizacion-v2.pdf`. Layout tipo factura/comprobante
 - **Footer:** teléfono + correo de la empresa, centrado, gris.
 - **N° correlativo:** único identificador público de la cotización — se deriva del `id` autoincremental de `cotizaciones` formateado a 4 dígitos (accessor `Cotizacion::numero`, no es una secuencia separada). Se usa en el PDF, en el mensaje de WhatsApp y en la pantalla de confirmación del cotizador. **El antiguo código alfanumérico `MA-XXXX` fue eliminado** (columna `codigo` dropeada, ver migración `drop_codigo_from_cotizaciones_table`) — no reintroducirlo.
 
+### 4.8 Galería (implementado, Sprint 4)
+
+- **`GaleriaItem`** (tabla `galeria_items`, ver §5) — `foto_path` es una ruta relativa dentro del disco `public` de Laravel (`storage/app/public/galeria/…`), servida vía el symlink `public/storage` (`php artisan storage:link`). El accessor `GaleriaItem::url` resuelve la URL pública con `Storage::disk('public')->url(...)`.
+- **`app/Livewire/GaleriaMosaico.php`** — Livewire simple (sin estado propio más allá del listado), consulta `GaleriaItem::where('publicado', true)->orderBy('orden')->get()`. Vista en `resources/views/livewire/galeria-mosaico.blade.php`: grid mosaico (primer ítem ocupa 2×2) + lightbox construido en **Alpine puro** (navegación con flechas de teclado y clic fuera para cerrar), sin roundtrip a servidor — mismo patrón que el acordeón de FAQ (§4.4). Termina con el CTA `Ver más en WhatsApp →` del mockup original.
+- **Contenido de arranque:** `database/seeders/GaleriaItemSeeder.php` puebla 6 ítems (uno por tipo de espacio) usando SVG generados con la paleta de marca (`storage/app/public/galeria/*.svg`) como placeholder — **no son fotos reales de trabajos**, deben reemplazarse cuando existan. El componente maneja explícitamente el estado sin filas (`galeria_items` vacía o todas `publicado=false`): muestra *"Muy pronto vamos a publicar fotos de nuestros trabajos aquí"* en vez de un grid roto.
+- **R2 descartado** (ver §1, §3): no hay integración con ningún servicio externo de almacenamiento para la galería.
+
+### 4.9 SEO y schema.org (implementado, Sprint 4)
+
+- **`LocalBusiness`** — JSON-LD en `resources/views/components/layouts/app.blade.php` (aplica a toda la landing, un solo layout). Incluye nombre, teléfono, dirección (Av. Diego Portales #1333, Arica) y `priceRange`. Datos hardcodeados en la plantilla, igual criterio que el bloque EMPRESA del PDF (§4.7).
+- **`FAQPage`** — JSON-LD en `resources/views/components/landing/faq.blade.php`, generado a partir del mismo array `$preguntas` que renderiza el acordeón — una sola fuente de verdad, sin duplicar las 7 preguntas.
+- **Open Graph + canonical** — meta tags `og:*` y `<link rel="canonical">` en el layout, usando `url()->current()`.
+- **`/sitemap.xml`** (`routes/web.php`) — respuesta XML (`Content-Type: application/xml`) con cache pública de 1h. Sitio de una sola página: el sitemap solo lista la home; las secciones son anclas (`#servicios`, `#galeria`, etc.), que no son URLs indexables por separado.
+- **`/robots.txt`** — ruta dinámica (reemplaza el archivo estático que había en `public/`), referencia el sitemap con `Sitemap:`.
+
+### 4.10 Mapa de 301 (implementado sin acceso al Wix real)
+
+No se tuvo acceso al listado real de URLs de producción del sitio Wix anterior (§7 "Migración desde Wix" lo daba por pendiente). `routes/web.php` define redirects 301 para las rutas típicas de un sitio Wix de landing — `/page4` (explícitamente reportada como rota en la navegación original), `/servicios`, `/cotizar`, `/cotizacion`, `/galeria`, `/nosotros`, `/contacto`, `/preguntas-frecuentes`, `/faq`, `/home`, `/index` — todas apuntando a la sección equivalente de la página única (`/#seccion`) o a `/`. **Pendiente:** revisar los logs de acceso de Wix (o Google Search Console) tras el corte de DNS para detectar rutas 404 no cubiertas por este mapa y agregarlas.
+
 ---
 
 ## 5. Esquema de base de datos
@@ -203,10 +224,13 @@ visitas:         id, cotizacion_id, equipo_id(null), fecha_agendada, ventana_hor
 // Etapas 2–3
 trabajos:        id, cotizacion_id, equipo_id, medidas_finales(json), total_final(int),
                  firma_path, estado, finalizado_at
-trabajo_fotos:   id, trabajo_id, tipo(enum: anclaje|tension|panoramica), r2_key,
+trabajo_fotos:   id, trabajo_id, tipo(enum: anclaje|tension|panoramica), foto_path,
                  tomada_at, lat, lng, aprobada(bool), revisada_por
 consumos:        id, trabajo_id, malla_ml, cable_acero_ml, fijaciones(int), costo_total(int)
-galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
+
+// Implementado Sprint 4 — foto_path es la ruta relativa en el disco `public`
+// (storage/app/public), no una key de R2 (ver §1 y §3: R2 descartado).
+galeria_items:   id, foto_path, titulo, tipo_espacio_id(nullable), orden, publicado(bool)
 ```
 
 **Índices:** `cotizaciones(estado, created_at)`, `trabajo_fotos(trabajo_id, tipo)`.
@@ -225,7 +249,7 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 | `GET` | `/api/v1/trabajos/asignados` | Agenda del día del equipo |
 | `POST` | `/api/v1/trabajos/{id}/medidas` | Medidas reales → **recalcula con el mismo Service** → devuelve total final |
 | `POST` | `/api/v1/trabajos/{id}/firma` | Firma digital del cliente |
-| `POST` | `/api/v1/trabajos/{id}/fotos` | Presigned URL de R2; **el archivo nunca pasa por el VPS** |
+| `POST` | `/api/v1/trabajos/{id}/fotos` | Sube el archivo directo al VPS (filesystem local, ver §1 y §3) |
 | `POST` | `/api/v1/trabajos/{id}/finalizar` | Bloqueado hasta tener las 3 fotos obligatorias |
 
 **Nota:** el recálculo en terreno usa metros lineales reales + altura medida, sobre las **tarifas del snapshot de la cotización**, no las vigentes. Evita que el cliente vea un precio distinto al que le mostraron.
@@ -236,14 +260,13 @@ galeria_items:   id, r2_key, titulo, tipo_espacio_id, orden, publicado(bool)
 
 - VPS OpenCloud 4 GB / 2 vCPU, **Ubuntu 22.04.5 LTS**. **Los builds Docker ocurren solo en GitHub Actions → GHCR.** Nunca en el VPS.
 - **1 contenedor por entorno**: Laravel (Nginx + PHP-FPM vía supervisord). MariaDB y Redis son **instancias compartidas del VPS**, gestionadas por el repositorio `vpsa-infra` (`/opt/infra/data`), alcanzables por la red externa `backend-shared` con los aliases `mariadb` y `redis`. Sin puertos publicados al host.
-- R2 con dominio público para galería, detrás de Cloudflare CDN. Servir **WebP/AVIF responsivo**; el peso de imágenes es el único riesgo real de performance de esta landing.
-- Fotografías de trabajos (`trabajo_fotos`) se guardan en disco **dentro del contenedor `mallas-arica-app`**, no en R2 (ver §3). Requiere volumen persistente y considerar en `backup-db.sh`/estrategia de backup un backup de archivos aparte.
+- Galería pública y fotografías de trabajos (`trabajo_fotos`) se guardan en disco **dentro del contenedor `mallas-arica-app`** (ver §1, §3) — sin servicio externo de almacenamiento. Requiere volumen persistente y considerar en `backup-db.sh`/estrategia de backup un backup de archivos aparte.
 - Backups gestionados por infraestructura: `/opt/infra/scripts/backup-app.sh appmallas` produce **un `.sql.gz` por base** (`appmallas\_%`) y **un `.jsonl.gz` por índice de Redis** (export lógico del prefijo `appmallas:`), en `/var/backups/vps-apps/appmallas/`. Cron diario a las 03:15 con retención de 14 días y monitor Push en Uptime Kuma. Restauración: `/opt/infra/scripts/restore-app.sh` (hace dump de seguridad previo).
 
 **Migración desde Wix**
 1. Wix vivo hasta 1 semana de Mallas Arica estable en producción.
-2. Mapa de 301 (incluye `/page4` y los ítems de nav rotos).
-3. `LocalBusiness` + `FAQPage` schema.org, `sitemap.xml`, OG images por sección.
+2. Mapa de 301 (incluye `/page4` y los ítems de nav rotos) — **implementado sin acceso al sitio real, ver §4.10**. Revisar logs de Wix tras el corte de DNS para completar rutas que falten.
+3. `LocalBusiness` + `FAQPage` schema.org, `sitemap.xml`, OG por página — **implementado, ver §4.9**.
 
 ### 7.1 Pipeline CI/CD (implementado — pendiente solo configuración externa)
 
@@ -292,7 +315,7 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 1 | Migraciones + seeders de catálogos + `CotizacionCalculatorService` + **tests unitarios de los 8 edge cases** | `php artisan test` verde, sin UI |
 | 2 | Layout, tokens Tailwind, secciones estáticas 1–5 y 8–10 | Lighthouse ≥ 95 mobile |
 | 3 | ✅ `CotizadorWizard` + `PanelPrecio` + persistencia de lead + handoff WhatsApp + descarga PDF + honeypot/throttle | Lead guardado aunque no se envíe el WhatsApp — **cerrado** |
-| 4 | Galería (R2) + FAQ + SEO/schema + 301 | Sitemap indexable |
+| 4 | ✅ Galería (filesystem local) + FAQ + SEO/schema + 301 | Sitemap indexable — **cerrado** |
 | 5 | Panel admin: tarifas, leads, galería (Etapa 3 parcial) | El papá cambia un precio sin tocar código |
 | 5b | *(Etapa CRM, posterior)* Editor de páginas por bloques (ver §11) | Página editada desde el panel se refleja en el sitio sin deploy |
 | 6 | Deploy prod + monitoreo (Uptime Kuma) + 1 semana en paralelo con Wix | Corte de DNS |

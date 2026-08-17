@@ -8,6 +8,7 @@ use App\Models\Tarifa;
 use App\Models\TipoEspacio;
 use App\Models\TramoAltura;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -24,6 +25,10 @@ class CotizadorWizardTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // El throttle de CotizadorWizard vive en el RateLimiter, no en la BD:
+        // RefreshDatabase no lo resetea entre tests, así que hay que limpiarlo a mano.
+        RateLimiter::clear('cotizador:127.0.0.1');
 
         $this->ventana = TipoEspacio::create([
             'slug' => 'ventana',
