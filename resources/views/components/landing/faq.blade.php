@@ -67,4 +67,19 @@
             @endforeach
         </div>
     </div>
+
+    <script type="application/ld+json">
+        {!! json_encode([
+            '@context' => 'https://schema.org',
+            '@type' => 'FAQPage',
+            'mainEntity' => collect($preguntas)->map(fn ($item) => [
+                '@type' => 'Question',
+                'name' => $item['pregunta'],
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text' => $item['respuesta'],
+                ],
+            ])->all(),
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+    </script>
 </section>

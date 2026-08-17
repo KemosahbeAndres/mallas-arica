@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             TipoMallaSeeder::class,
             TramoAlturaSeeder::class,
             TarifaSeeder::class,
+            GaleriaItemSeeder::class,
         ]);
     }
 }
