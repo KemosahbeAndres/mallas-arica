@@ -12,6 +12,10 @@
             <p class="text-center text-sm text-white/60 sm:text-right">
                 Av. Diego Portales #1333, Arica · +56 9 8645 5205
                 <br class="hidden sm:inline">
+                <a href="mailto:contacto@mallasarica.cl" class="hover:text-white">contacto@mallasarica.cl</a>
+                ·
+                <a href="mailto:ventas@mallasarica.cl" class="hover:text-white">ventas@mallasarica.cl</a>
+                <br class="hidden sm:inline">
                 © {{ now()->year }} Mallas Arica. Todos los derechos reservados.
             </p>
         </div>

@@ -4,7 +4,7 @@
             Protege tu hogar hoy mismo
         </h2>
         <p class="mt-4 text-lg text-white/85">
-            Escríbenos y coordina tu visita técnica gratuita. Medimos, cotizamos y agendamos la instalación para que quede lista en una sola mañana.
+            Escríbenos y coordina tu visita técnica gratuita. Medimos, cotizamos y agendamos la instalación rápida, llegando siempre a la hora acordada.
         </p>
 
         <div class="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
@@ -23,5 +23,11 @@
                 Enviar un correo
             </a>
         </div>
+
+        <p class="mt-6 text-sm text-white/70">
+            <a href="mailto:contacto@mallasarica.cl" class="underline hover:text-white">contacto@mallasarica.cl</a>
+            ·
+            <a href="mailto:ventas@mallasarica.cl" class="underline hover:text-white">ventas@mallasarica.cl</a>
+        </p>
     </div>
 </section>

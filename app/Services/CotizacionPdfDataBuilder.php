@@ -14,7 +14,7 @@ class CotizacionPdfDataBuilder
         'rut' => '10.610.838-2',
         'direccion' => 'Av. Diego Portales #1333, Arica',
         'telefono' => '+56 9 8645 5205',
-        'email' => 'jacobtj1992@gmail.com',
+        'email' => 'contacto@mallasarica.cl',
     ];
 
     private const MESES = [

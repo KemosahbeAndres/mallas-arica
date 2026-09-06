@@ -13,7 +13,7 @@
 
         <ul class="hidden items-center gap-8 text-sm font-medium text-ink-soft lg:flex">
             <li><a href="#servicios" class="transition-colors hover:text-ink">Servicios</a></li>
-            <li><a href="#cotizador" class="transition-colors hover:text-ink">Cotizador</a></li>
+            <li><a href="#cotizador" class="transition-colors hover:text-ink">Cotizar</a></li>
             <li><a href="#galeria" class="transition-colors hover:text-ink">Galería</a></li>
             <li><a href="#faq" class="transition-colors hover:text-ink">FAQ</a></li>
         </ul>
@@ -54,7 +54,7 @@
     >
         <ul class="flex flex-col gap-4 text-sm font-medium text-ink-soft">
             <li><a href="#servicios" @click="open = false" class="hover:text-ink">Servicios</a></li>
-            <li><a href="#cotizador" @click="open = false" class="hover:text-ink">Cotizador</a></li>
+            <li><a href="#cotizador" @click="open = false" class="hover:text-ink">Cotizar</a></li>
             <li><a href="#galeria" @click="open = false" class="hover:text-ink">Galería</a></li>
             <li><a href="#faq" @click="open = false" class="hover:text-ink">FAQ</a></li>
             <li>
