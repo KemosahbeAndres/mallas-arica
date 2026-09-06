@@ -114,4 +114,18 @@ return [
 
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Store de tarifas
+    |--------------------------------------------------------------------------
+    |
+    | Store usado por TarifaCacheService (CLAUDE.md §4.4). Separado del
+    | 'default' porque el .env de desarrollo usa CACHE_STORE=database, y las
+    | tarifas deben cachearse en Redis según lo documentado. En tests se
+    | fuerza a 'array' vía CACHE_TARIFAS_STORE.
+    |
+    */
+
+    'tarifas_store' => env('CACHE_TARIFAS_STORE', 'redis'),
+
 ];

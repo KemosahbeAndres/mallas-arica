@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\DataTransferObjects\CotizacionCalculoResultado;
 use App\DataTransferObjects\ItemCalculoResultado;
-use App\Models\Tarifa;
 use App\Models\TipoEspacio;
 use App\Models\TipoMalla;
 use App\Models\TramoAltura;
@@ -14,6 +13,10 @@ class CotizacionCalculatorService
     public const METRAJE_MINIMO = 2.0;
 
     public const METRAJE_MAXIMO = 40.0;
+
+    public function __construct(
+        private readonly TarifaCacheService $tarifaCache,
+    ) {}
 
     /**
      * Calcula un ítem de cotización a partir de sus datos crudos.
@@ -52,15 +55,7 @@ class CotizacionCalculatorService
             return $this->itemLead($tipoEspacioId, $tipoMallaId, $tramoAlturaId, $metrosLineales, 'altura_requiere_visita');
         }
 
-        $tarifa = Tarifa::where('tipo_espacio_id', $tipoEspacioId)
-            ->where('tramo_altura_id', $tramoAlturaId)
-            ->where('vigente_desde', '<=', now()->toDateString())
-            ->where(function ($query) {
-                $query->whereNull('vigente_hasta')
-                    ->orWhere('vigente_hasta', '>=', now()->toDateString());
-            })
-            ->orderByDesc('vigente_desde')
-            ->first();
+        $tarifa = $this->tarifaCache->buscar($tipoEspacioId, $tramoAlturaId);
 
         if (! $tarifa) {
             return $this->itemLead($tipoEspacioId, $tipoMallaId, $tramoAlturaId, $metrosLineales, 'sin_tarifa_vigente');

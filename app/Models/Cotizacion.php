@@ -16,6 +16,9 @@ class Cotizacion extends Model
 
     protected $table = 'cotizaciones';
 
+    /** Únicos valores válidos, hoy declarados solo en la migración (enum de BD). */
+    public const ESTADOS = ['borrador', 'contactado', 'agendado', 'cerrado', 'perdido'];
+
     protected $fillable = [
         'uuid',
         'nombre',

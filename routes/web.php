@@ -1,8 +1,34 @@
 <?php
 
+use App\Livewire\Admin\Auth\Login;
+use App\Livewire\Admin\Galeria\GaleriaIndex;
+use App\Livewire\Admin\Leads\LeadDetalle;
+use App\Livewire\Admin\Leads\LeadsIndex;
+use App\Livewire\Admin\Tarifas\TarifasMatriz;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'landing')->name('home');
+
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::middleware('guest')->get('/login', Login::class)->name('login');
+
+    Route::middleware('auth')->group(function () {
+        Route::get('/', fn () => redirect()->route('admin.tarifas'));
+        Route::get('/tarifas', TarifasMatriz::class)->name('tarifas');
+        Route::get('/leads', LeadsIndex::class)->name('leads.index');
+        Route::get('/leads/{cotizacion}', LeadDetalle::class)->name('leads.show');
+        Route::get('/galeria', GaleriaIndex::class)->name('galeria');
+
+        Route::post('/logout', function () {
+            Auth::guard('web')->logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+
+            return redirect()->route('admin.login');
+        })->name('logout');
+    });
+});
 
 Route::get('/sitemap.xml', function () {
     return response()
