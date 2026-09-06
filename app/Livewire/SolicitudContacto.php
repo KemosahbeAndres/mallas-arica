@@ -2,7 +2,9 @@
 
 namespace App\Livewire;
 
+use App\Jobs\EnviarNotificacionesCotizacion;
 use App\Models\Cotizacion;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
 
@@ -64,6 +66,17 @@ class SolicitudContacto extends Component
         $this->numeroGenerado = $cotizacion->numero;
 
         $this->reset(['nombre', 'telefono', 'direccion', 'email']);
+
+        // El correo es un efecto secundario: si el dispatch falla (Redis caído),
+        // la cotización ya está persistida y el flujo de conversión sigue intacto.
+        try {
+            EnviarNotificacionesCotizacion::dispatch($cotizacion)->afterResponse();
+        } catch (\Throwable $e) {
+            Log::error('No se pudo encolar la notificación de cotización', [
+                'cotizacion_id' => $cotizacion->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function render()

@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire;
 use App\Livewire\SolicitudContacto;
 use App\Models\Cotizacion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -16,6 +17,8 @@ class SolicitudContactoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        Mail::fake();
 
         // El throttle de SolicitudContacto vive en el RateLimiter, no en la BD:
         // RefreshDatabase no lo resetea entre tests, así que hay que limpiarlo a mano.

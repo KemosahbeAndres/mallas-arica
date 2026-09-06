@@ -81,8 +81,11 @@ return [
 
         'failover' => [
             'transport' => 'failover',
+            // Resend primero; si el relay cae, el correo queda en el log del
+            // contenedor (stderr → Dozzle) en vez de lanzar excepción y
+            // quemar reintentos del job.
             'mailers' => [
-                'smtp',
+                'resend',
                 'log',
             ],
             'retry_after' => 60,
@@ -114,5 +117,15 @@ return [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Destinatario interno de avisos
+    |--------------------------------------------------------------------------
+    | Dirección del dueño para notificaciones de cotizaciones/solicitudes nuevas.
+    | Sale de config y no del código para que migrar de Cloudflare Routing a
+    | un buzón real (Zoho) sea un cambio de .env y nada más.
+    */
+    'admin_address' => env('MAIL_ADMIN_ADDRESS', 'contacto@mallasarica.cl'),
 
 ];

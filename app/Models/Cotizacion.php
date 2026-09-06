@@ -35,6 +35,7 @@ class Cotizacion extends Model
     {
         return [
             'requiere_visita' => 'boolean',
+            'notificado_at' => 'datetime',
         ];
     }
 

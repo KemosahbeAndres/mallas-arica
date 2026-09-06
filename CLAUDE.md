@@ -318,7 +318,7 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 4 | ✅ Galería (filesystem local) + FAQ + SEO/schema + 301 | Sitemap indexable — **cerrado** |
 | 5 | Panel admin: tarifas, leads, galería (Etapa 3 parcial) | El papá cambia un precio sin tocar código |
 | 5b | *(Etapa CRM, posterior)* Editor de páginas por bloques (ver §11) | Página editada desde el panel se refleja en el sitio sin deploy |
-| 5c | Correo transaccional (Resend + Cloudflare Email Routing) — ver `plan-correo.md` | Lead nuevo dispara aviso al dueño y copia al cliente (si dejó email); circuito completo verificado (§6 de `plan-correo.md`) |
+| 5c | ✅ Correo transaccional (Resend + Cloudflare Email Routing) — ver `plan-correo.md` | Código listo y testeado (`php artisan test`, Pint verde); **pendiente la configuración externa** (Cloudflare Email Routing, dominio verificado en Resend, secrets en el VPS) antes de verificar el circuito completo (§6 de `plan-correo.md`) — **cerrado del lado del repositorio** |
 | 6 | Deploy prod + monitoreo (Uptime Kuma) + 1 semana en paralelo con Wix | Corte de DNS |
 
 > Sprint 1 antes que cualquier pixel. Si la fórmula de precio cambia después de tener UI, se rehace la UI.

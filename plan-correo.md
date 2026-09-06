@@ -1,6 +1,6 @@
 # Plan de correo (Mallas Arica)
 
-> **Estado:** decisión tomada, implementación pendiente — Sprint 5c del plan de ejecución (`CLAUDE.md` §8).
+> **Estado:** implementado en el repositorio (Sprint 5c del plan de ejecución, `CLAUDE.md` §8). Pendiente solo la configuración externa de §3 (Cloudflare Email Routing, verificación de dominio en Resend, DMARC) y el checklist de VPS/Cloudflare de §8 — nada de código queda por escribir.
 > **Audiencia:** instancia de Claude ejecutando en local sobre el repo `mallas-arica`.
 > **Precondición de lectura:** `CLAUDE.md` (§4.5 persistencia del lead, §4.7 PDF, §5 esquema) y `plan-cicd.md` (§3.5 supervisord, §4.1 compose, §9 deuda técnica).
 
@@ -258,8 +258,9 @@ Cargar las relaciones (`items.tipoEspacio`, `items.tipoMalla`, `items.tramoAltur
 - `To`: `config('mail.admin_address')`.
 - `Reply-To`: el correo del cliente **si existe**; si no, omitirlo.
 - Asunto: `"Cotización N° {numero} — {nombre} ({telefono})"`. El teléfono en el asunto permite al dueño llamar sin abrir el correo.
-- Cuerpo: nombre, teléfono (como enlace `tel:` y `wa.me`), dirección, rango total (si existe cálculo) o aviso de "solicitud de visita sin cálculo de precio" (si viene del formulario de contacto), tabla de ítems si los hay, badge si `requiere_visita`, y enlace directo al registro en el panel Filament.
+- Cuerpo: nombre, teléfono (como enlace `tel:` y `wa.me`), dirección, rango total (si existe cálculo) o aviso de "solicitud de visita sin cálculo de precio" (si viene del formulario de contacto), tabla de ítems si los hay, badge si `requiere_visita`.
 - **Sin adjunto.** El dueño no necesita el PDF; necesita el teléfono.
+- **Implementado sin enlace al panel Filament**: el Sprint 5 (panel admin) todavía no existe en el repositorio, así que no hay ruta a la que enlazar. Agregar el enlace cuando se implemente el Sprint 5, dentro de `resources/views/emails/nueva-cotizacion-admin.blade.php`.
 
 > **Crítico — DMARC:** el `From` es siempre del dominio propio. Poner el correo del cliente en `From` para que "se vea de quién viene" rompe la alineación DMARC y manda el aviso a spam. Esa información va en `Reply-To` y en el cuerpo.
 
@@ -396,23 +397,23 @@ El paso 4 es el que suele fallar y es el que justifica toda la configuración. P
 
 ## 8. Checklist de implementación
 
-**Repositorio (instancia local)**
-- [ ] `composer require resend/resend-laravel`
-- [ ] `config/mail.php`: `failover.mailers = ['resend', 'log']` + clave `admin_address`
-- [ ] `config/database.php`: conexión Redis `queue` (índice 3) → *verificar antes si el Redis es dedicado o compartido con ACL*
-- [ ] `config/queue.php`: `connections.redis.connection = 'queue'`
-- [ ] Migración `notificado_at`
-- [ ] `app/Services/CotizacionPdfService.php` + refactor de `crearCotizacionYDescargarPdf()` + tolerancia a cotizaciones sin ítems
-- [ ] `app/Mail/NuevaCotizacionAdmin.php` + vista Blade con estilos inline
-- [ ] `app/Mail/CopiaCotizacionCliente.php` + vista Blade con estilos inline
-- [ ] `app/Jobs/EnviarNotificacionesCotizacion.php`
-- [ ] Enganche + `try/catch` en `CotizadorWizard::persistirCotizacion()` **y** `SolicitudContacto::enviar()`
-- [ ] `app/Console/Commands/ReintentarNotificaciones.php` (firma `app:reintentar-notificaciones`) + registro `->hourly()`
-- [ ] `docker/prod/supervisord.conf`: bloque `[program:queue]` activo
-- [ ] `deploy/.env.production.example` y `.env.example` actualizados
-- [ ] Tests de §5 en verde
-- [ ] `./vendor/bin/pint --test` en verde
-- [ ] `php artisan route:cache && php artisan route:clear` sin errores
+**Repositorio (instancia local)** — ✅ completo
+- [x] `composer require resend/resend-laravel`
+- [x] `config/mail.php`: `failover.mailers = ['resend', 'log']` + clave `admin_address`
+- [x] `config/database.php`: conexión Redis `queue` (índice 3) → el Redis de producción es compartido con ACL (`REDIS_PREFIX=appmallas:`, ver `CLAUDE.md` §7.1); en desarrollo local el `.env` sigue con `QUEUE_CONNECTION=database` (funciona sin worker) y `MAIL_MAILER=log`
+- [x] `config/queue.php`: `connections.redis.connection = 'queue'`
+- [x] Migración `notificado_at` (`2026_09_06_000000_add_notificado_at_to_cotizaciones_table`)
+- [x] `app/Services/CotizacionPdfService.php` + refactor de `crearCotizacionYDescargarPdf()` + tolerancia a cotizaciones sin ítems
+- [x] `app/Mail/NuevaCotizacionAdmin.php` + vista Blade con estilos inline
+- [x] `app/Mail/CopiaCotizacionCliente.php` + vista Blade con estilos inline
+- [x] `app/Jobs/EnviarNotificacionesCotizacion.php`
+- [x] Enganche + `try/catch` en `CotizadorWizard::persistirCotizacion()` **y** `SolicitudContacto::enviar()`
+- [x] `app/Console/Commands/ReintentarNotificaciones.php` (firma `app:reintentar-notificaciones`) + registro `->hourly()`
+- [x] `docker/prod/supervisord.conf`: bloque `[program:queue]` activo
+- [x] `deploy/.env.production.example` y `.env.example` actualizados (de paso se eliminaron las variables `R2_*` obsoletas de `.env.production.example`, ver `CLAUDE.md` §1/§3)
+- [x] Tests de §5 en verde (`tests/Feature/Notificaciones/CotizacionNotificacionTest.php`, 7/7) + `Mail::fake()` agregado a `CotizadorWizardTest` y `SolicitudContactoTest`
+- [x] `./vendor/bin/pint --test` en verde (71 archivos)
+- [x] `php artisan route:cache && php artisan route:clear` sin errores
 
 **Cloudflare / DNS (humano)**
 - [ ] NS de `mallasarica.cl` apuntando a Cloudflare (coordinar con la migración de dominio)
