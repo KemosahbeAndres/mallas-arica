@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             TramoAlturaSeeder::class,
             TarifaSeeder::class,
             GaleriaItemSeeder::class,
+            SiteContentSeeder::class,
+            FaqSeeder::class,
         ]);
     }
 }

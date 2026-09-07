@@ -128,4 +128,17 @@ return [
 
     'tarifas_store' => env('CACHE_TARIFAS_STORE', 'redis'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Store de contenido del sitio
+    |--------------------------------------------------------------------------
+    |
+    | Store usado por SiteContentService (CLAUDE.md §11, Sprint 8) para cachear
+    | el contenido editable de la landing y las FAQ. Mismo criterio que
+    | 'tarifas_store': Redis en prod, forzado a 'array' en tests.
+    |
+    */
+
+    'site_content_store' => env('CACHE_SITE_CONTENT_STORE', 'redis'),
+
 ];

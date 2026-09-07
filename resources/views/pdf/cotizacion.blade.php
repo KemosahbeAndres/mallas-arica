@@ -178,8 +178,7 @@
     </table>
 
     <div class="vigencia">
-        Esta cotización tiene una <strong>vigencia de 10 días</strong> a contar de la fecha de emisión.
-        Los valores están expresados en pesos chilenos (CLP) e incluyen IVA según se detalla.
+        {{ $mensajeVigencia }}
     </div>
 
     <p class="footer">

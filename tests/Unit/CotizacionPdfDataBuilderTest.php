@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Cotizacion;
+use App\Models\SiteContent;
 use App\Models\TipoEspacio;
 use App\Models\TipoMalla;
 use App\Models\TramoAltura;
@@ -26,7 +27,7 @@ class CotizacionPdfDataBuilderTest extends TestCase
     {
         parent::setUp();
 
-        $this->builder = new CotizacionPdfDataBuilder;
+        $this->builder = app(CotizacionPdfDataBuilder::class);
 
         $this->ventana = TipoEspacio::create([
             'slug' => 'ventana',
@@ -126,5 +127,41 @@ class CotizacionPdfDataBuilderTest extends TestCase
         $this->assertSame(0, $datos['neto']);
         $this->assertSame(0, $datos['iva']);
         $this->assertSame(0, $datos['total']);
+    }
+
+    public function test_mensaje_de_vigencia_usa_el_default_sin_contenido_configurado(): void
+    {
+        $cotizacion = Cotizacion::create([
+            'nombre' => 'Juan Pérez',
+            'telefono' => '+56912345678',
+            'canal' => 'web',
+            'estado' => 'borrador',
+        ]);
+
+        $datos = $this->builder->construir($cotizacion);
+
+        $this->assertSame(CotizacionPdfDataBuilder::MENSAJE_VIGENCIA_DEFAULT, $datos['mensajeVigencia']);
+    }
+
+    public function test_mensaje_de_vigencia_toma_el_valor_editado_en_site_contents(): void
+    {
+        SiteContent::create([
+            'key' => 'cotizaciones.mensaje_vigencia',
+            'value' => 'Vigencia de 30 días. Precio sujeto a visita técnica.',
+            'grupo' => 'cotizaciones',
+            'label' => 'Mensaje de vigencia',
+            'tipo' => 'textarea',
+        ]);
+
+        $cotizacion = Cotizacion::create([
+            'nombre' => 'Juan Pérez',
+            'telefono' => '+56912345678',
+            'canal' => 'web',
+            'estado' => 'borrador',
+        ]);
+
+        $datos = $this->builder->construir($cotizacion);
+
+        $this->assertSame('Vigencia de 30 días. Precio sujeto a visita técnica.', $datos['mensajeVigencia']);
     }
 }

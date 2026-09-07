@@ -10,6 +10,8 @@ class CotizacionPdfDataBuilder
 {
     public const IVA_TASA = 0.19;
 
+    public const MENSAJE_VIGENCIA_DEFAULT = 'Esta cotización tiene una vigencia de 10 días a contar de la fecha de emisión. Los valores están expresados en pesos chilenos (CLP) e incluyen IVA según se detalla.';
+
     public const EMPRESA = [
         'rut' => '10.610.838-2',
         'direccion' => 'Av. Diego Portales #1333, Arica',
@@ -23,8 +25,10 @@ class CotizacionPdfDataBuilder
         9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre',
     ];
 
+    public function __construct(private readonly SiteContentService $siteContent) {}
+
     /**
-     * @return array{numero: string, fecha: string, empresa: array, lineas: array, neto: int, iva: int, total: int}
+     * @return array{numero: string, fecha: string, empresa: array, lineas: array, neto: int, iva: int, total: int, mensajeVigencia: string}
      */
     public function construir(Cotizacion $cotizacion): array
     {
@@ -47,6 +51,7 @@ class CotizacionPdfDataBuilder
             'neto' => $neto,
             'iva' => $iva,
             'total' => $neto + $iva,
+            'mensajeVigencia' => $this->siteContent->get('cotizaciones.mensaje_vigencia', self::MENSAJE_VIGENCIA_DEFAULT),
         ];
     }
 

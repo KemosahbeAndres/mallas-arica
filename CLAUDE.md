@@ -185,7 +185,7 @@ Fuente de verdad: `./diseño/cotizacion-v2.pdf`. Layout tipo factura/comprobante
 ### 4.9 SEO y schema.org (implementado, Sprint 4)
 
 - **`LocalBusiness`** — JSON-LD en `resources/views/components/layouts/app.blade.php` (aplica a toda la landing, un solo layout). Incluye nombre, teléfono, dirección (Av. Diego Portales #1333, Arica) y `priceRange`. Datos hardcodeados en la plantilla, igual criterio que el bloque EMPRESA del PDF (§4.7).
-- **`FAQPage`** — JSON-LD en `resources/views/components/landing/faq.blade.php`, generado a partir del mismo array `$preguntas` que renderiza el acordeón — una sola fuente de verdad, sin duplicar las 7 preguntas.
+- **`FAQPage`** — JSON-LD en `resources/views/components/landing/faq.blade.php`, generado a partir de la misma colección que renderiza el acordeón — una sola fuente de verdad. Desde el Sprint 8 esa colección viene de la tabla `faqs` vía `SiteContentService::faqs()` (antes era un array hardcodeado en el Blade); el `<script>` solo se emite si hay preguntas publicadas.
 - **Open Graph + canonical** — meta tags `og:*` y `<link rel="canonical">` en el layout, usando `url()->current()`.
 - **`/sitemap.xml`** (`routes/web.php`) — respuesta XML (`Content-Type: application/xml`) con cache pública de 1h. Sitio de una sola página: el sitemap solo lista la home; las secciones son anclas (`#servicios`, `#galeria`, etc.), que no son URLs indexables por separado.
 - **`/robots.txt`** — ruta dinámica (reemplaza el archivo estático que había en `public/`), referencia el sitemap con `Sitemap:`.
@@ -252,6 +252,13 @@ consumos:        id, trabajo_id, malla_ml, cable_acero_ml, fijaciones(int), cost
 // Implementado Sprint 4 — foto_path es la ruta relativa en el disco `public`
 // (storage/app/public), no una key de R2 (ver §1 y §3: R2 descartado).
 galeria_items:   id, foto_path, titulo, tipo_espacio_id(nullable), orden, publicado(bool)
+
+// Implementado Sprint 8 — contenido editable de la landing en BD (§11 bis).
+// Sin SoftDeletes (no son datos de cliente). site_contents.key con notación
+// de punto; faqs alimenta el acordeón y el JSON-LD FAQPage.
+site_contents:   id, key(unique), value(text nullable), grupo, label,
+                 tipo(text|textarea), orden, timestamps
+faqs:            id, pregunta, respuesta, orden, publicada(bool), timestamps
 ```
 
 **Índices:** `cotizaciones(estado, created_at)`, `trabajo_fotos(trabajo_id, tipo)`.
@@ -338,11 +345,12 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 3 | ✅ `CotizadorWizard` + `PanelPrecio` + persistencia de lead + handoff WhatsApp + descarga PDF + honeypot/throttle | Lead guardado aunque no se envíe el WhatsApp — **cerrado** |
 | 4 | ✅ Galería (filesystem local) + FAQ + SEO/schema + 301 | Sitemap indexable — **cerrado** |
 | 5 | ✅ Panel admin: tarifas, leads, galería (Etapa 3 parcial) — ver §4.11 | El papá cambia un precio sin tocar código — **cerrado**, verificado con `php artisan test` (70 tests) |
-| 5b | *(Etapa CRM, posterior)* Editor de páginas por bloques (ver §11) | Página editada desde el panel se refleja en el sitio sin deploy |
 | 5c | ✅ Correo transaccional (Resend + Cloudflare Email Routing) — ver `plan-correo.md` | Código listo y testeado (`php artisan test`, Pint verde); **pendiente la configuración externa** (Cloudflare Email Routing, dominio verificado en Resend, secrets en el VPS) antes de verificar el circuito completo (§6 de `plan-correo.md`) — **cerrado del lado del repositorio** |
 | 6 | ✅ Deploy prod | Sitio en producción en `mallasarica.cl`, DNS propagado — **cerrado** |
 | 7 | ✅ Ajustes de contenido/negocio en la landing pedidos por el dueño (sección "Tipos de Malla" con 3 espesores + precios de referencia, sistemas de instalación Netzen/aluminio, redes sociales en footer, imagen del hero) — ver §4.1 | Sección Tipos de Malla + redes sociales + placeholder de marca del hero **implementados**, `pint --test` y `php artisan test` (70) verdes — **cerrado**. La foto real del Morro de Arica (insumo del dueño) es un swap de archivo posterior, no bloquea el cierre |
-| 8–16 | CRM completo (editor de contenido del sitio, imágenes editables, FAQ editable, dashboard Resumen, entidad Clientes, Calendario interno y con Google, rediseño de Cotizaciones) — orden fijado por decisión del dueño: contenido primero, Cotizaciones al final | Ver plan de sesión guardado para el desglose sprint por sprint y las decisiones de diseño cerradas |
+| 8 | ✅ CRM «Sitio web»: contenido editable de la landing (Hero, Nosotros, mensaje de vigencia del PDF), FAQ editable, galería re-enlazada como sub-tab, **todo en base de datos** (tabla `site_contents` clave-valor + tabla `faqs`), sin editor de bloques. Nuevo chrome del admin = navbar horizontal del `diseño/dashboard-v1.pdf` (Resumen · Cotizaciones · Clientes · Calendario · Sitio web) con placeholders «Próximamente» para lo aún no construido — ver §11 bis | El dueño edita el título del Hero y una pregunta de FAQ desde el panel y se refleja en el sitio sin deploy — **cerrado**, `pint --test` y `php artisan test` (87) verdes |
+| 9–16 | CRM completo (dashboard Resumen, entidad Clientes con direcciones/instalaciones, Calendario interno y con Google, rediseño de Cotizaciones con folio y estados) — orden fijado por decisión del dueño: contenido primero (Sprint 8), Cotizaciones al final. Diseño de referencia: `diseño/dashboard-v1.pdf` (9 páginas) | Ver desglose sprint por sprint cuando se aborde cada uno |
+| Final | Editor de páginas por bloques avanzado (ex-Sprint 5b, ver §11), al estilo WordPress + Otter Blocks — **última pieza del roadmap, después de todo el CRM** | Página editada por bloques desde el panel se refleja en el sitio sin deploy |
 
 > **Nota sobre el modelo de negocio (post-Sprint 7):** el cotizador automático (`CotizadorWizard`) permanece oculto — el dueño cotiza manualmente tras la visita técnica. Los precios de referencia por m² que ahora se muestran en la landing (sección "Tipos de Malla") son **contenido informativo**, no alimentan ningún cálculo del sistema. `CotizacionCalculatorService`, `tarifas` y `tipos_malla` (con su multiplicador) siguen existiendo tal cual, sin consumidor público activo.
 >
@@ -379,9 +387,31 @@ Todo en la carpeta `./diseño`:
 
 **Fase futura:** el panel admin (Sprint 5, §8) evoluciona a un **CRM completo**, que incluye:
 - Gestión de leads/cotizaciones, tarifas y galería (ya cubierto en Sprint 5).
-- **Editor de páginas por bloques avanzado**, al estilo **WordPress + Otter Blocks** (o equivalente): permite componer/editar secciones de la landing (hero, qué protegemos, FAQ, etc.) desde el panel sin tocar código ni requerir deploy.
+- **Contenido editable de la landing en base de datos** (Sprint 8): tabla `site_contents` (clave-valor, agrupada, cacheada en Redis) + tabla `faqs`. Los Blade y la plantilla del PDF leen de ahí; el contenido hoy hardcodeado se migra vía seeder y pasa a ser el contenido inicial editable. **No es un editor de bloques** — son formularios de campos fijos.
+- **Editor de páginas por bloques avanzado**, al estilo **WordPress + Otter Blocks** (o equivalente): permite componer/editar secciones de la landing (hero, qué protegemos, FAQ, etc.) desde el panel sin tocar código ni requerir deploy. **Decisión del dueño: es la ÚLTIMA pieza del roadmap**, después de todo el CRM (dashboard, Clientes, Calendario, Cotizaciones). No confundir con el contenido editable del Sprint 8, que es campos fijos en BD, no bloques.
 
-**Implicancias de diseño a tener en cuenta desde ya (sin implementar aún):**
+**Implicancias de diseño a tener en cuenta desde ya:**
 - Las secciones estáticas del §4.1 deben construirse como **componentes Blade/Livewire desacoplados y con props claras**, para que cada una pueda convertirse más adelante en un "bloque" editable sin reescritura completa.
-- El contenido "hardcodeado" en Sprint 2–4 (textos, orden de secciones, imágenes) es candidato a migrar a una tabla de tipo `paginas`/`bloques` (JSON de configuración por bloque) cuando se active el editor — no es necesario modelarla todavía, pero **evitar acoplar lógica de negocio a la maquetación estática** para que esa migración sea de datos, no de código.
-- El editor de bloques es una funcionalidad de la Etapa 3 (admin), posterior al MVP; no bloquea ni forma parte del criterio de cierre de los Sprints 1–4.
+- El editor de bloques es la última funcionalidad del roadmap (post-CRM); no bloquea ni forma parte del criterio de cierre de ningún sprint anterior.
+
+### 11 bis. Sprint 8 — CRM «Sitio web» (implementado)
+
+**Contenido editable en base de datos, sin editor de bloques.** Dos tablas nuevas:
+
+- **`site_contents`** (`key` unique, `value` nullable, `grupo`, `label`, `tipo` = `text|textarea`, `orden`) — campos de texto fijos de la landing y del PDF. `key` con notación de punto (`hero.titulo_1`, `nosotros.texto_2`, `cotizaciones.mensaje_vigencia`); el `grupo` (primer segmento) agrupa la UI del panel. `database/seeders/SiteContentSeeder` la puebla con los textos que antes vivían hardcodeados en los Blade — al sembrarse **pasan a ser el contenido inicial editable, no un fallback**. El seeder solo escribe `value` al crear la fila; si ya existía, respeta lo editado por el dueño (la metadata `label`/`tipo`/`orden`/`grupo` sí la refresca siempre).
+- **`faqs`** (`pregunta`, `respuesta`, `orden`, `publicada`) — reemplaza el array hardcodeado de `faq.blade.php`. `database/seeders/FaqSeeder` migra las 7 preguntas. El acordeón y el JSON-LD `FAQPage` (§4.9) leen ambos de esta tabla vía `SiteContentService::faqs()` — una sola fuente de verdad. El `<script type="application/ld+json">` solo se emite si hay preguntas publicadas.
+
+**`App\Services\SiteContentService`** — mismo patrón que `TarifaCacheService` (§4.4): colección completa cacheada bajo key versionada (`site_content:v{n}`, `faqs:v{n}`), invalidación por `Cache::increment` de la versión (no `forget`), store configurable vía `config('cache.site_content_store')` (`CACHE_SITE_CONTENT_STORE`, default `redis`). Observers `SiteContentObserver` / `FaqObserver` registrados en `AppServiceProvider::boot()` invalidan en `saved`/`deleted` — cubre tinker y comandos, no solo el admin.
+
+**Helper global `site_content('hero.titulo_1', 'default')`** (`app/helpers.php`, cargado vía `composer.json` → `autoload.files`). Los Blade de la landing (`hero`, `about-us`) lo usan; `faq.blade.php` resuelve `SiteContentService` directo. El PDF: `CotizacionPdfDataBuilder` recibe `SiteContentService` por constructor y expone `mensajeVigencia` (con `MENSAJE_VIGENCIA_DEFAULT` como fallback); la plantilla `pdf/cotizacion.blade.php` ya no hardcodea la franja de vigencia. Los datos de `EMPRESA` del PDF (RUT, dirección, teléfono) **siguen hardcodeados** en el builder — no son parte del alcance del Sprint 8 (el `diseño/dashboard-v1.pdf` solo expone el mensaje de vigencia como editable).
+
+**Chrome del admin rediseñado** (`components/layouts/admin.blade.php` + `components/admin/navbar.blade.php`): navbar horizontal negra del `diseño/dashboard-v1.pdf` con 5 entradas — **Resumen · Cotizaciones · Clientes · Calendario · Sitio web**. El `x-admin.sidebar` del Sprint 5 fue **eliminado**. Las 4 secciones aún no construidas (Sprints 9+) apuntan a `App\Livewire\Admin\Proximamente` (rutas con `->defaults('seccion', ...)`/`->defaults('detalle', ...)`). Las rutas del panel del Sprint 5 (`/admin/tarifas`, `/admin/leads`, `/admin/galeria`) **siguen vivas** — enlaces guardados y tests; `/admin` redirige ahora a `/admin/sitio-web` (antes a `/admin/tarifas`).
+
+**«Sitio web»** (`App\Livewire\Admin\SitioWeb\SitioWebPanel`, ruta `admin.sitio-web`): 3 sub-tabs con estado en query string (`#[Url] $tab`):
+- **Contenido** (`ContenidoForm`) — formulario agrupado sobre `site_contents`. `valores` se indexa por **id** de la fila, no por `key` (Livewire interpreta los puntos de `wire:model="valores.hero.titulo_1"` como path anidado). Valor vacío → `null`. Validación `nullable|string|max:2000` por campo.
+- **Imágenes** — reusa `App\Livewire\Admin\Galeria\GaleriaIndex` tal cual, embebido como `<livewire:...>` (su `->layout()` se ignora al anidarse).
+- **FAQ** (`FaqManager`) — CRUD inline: agregar/editar/eliminar filas, toggle `publicada`, el orden se deriva del índice del array al guardar (sin drag-and-drop). `updateOrCreate` por `id` en `DB::transaction`.
+
+**Tests (87 en verde):** `SiteContentServiceTest`, `ContenidoFormTest`, `FaqManagerTest`, `CrmNavegacionTest`, más los casos de vigencia en `CotizacionPdfDataBuilderTest` y el reseed de FAQ en `LandingPageTest`. `phpunit.xml` fuerza `CACHE_SITE_CONTENT_STORE=array` igual que `CACHE_TARIFAS_STORE`.
+
+**No se tocó** el esquema de Clientes / Cotizaciones / Calendario — eso va en sus propios sprints (9+).

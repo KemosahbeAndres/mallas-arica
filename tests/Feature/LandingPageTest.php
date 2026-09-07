@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Database\Seeders\FaqSeeder;
 use Database\Seeders\TipoEspacioSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,6 +25,7 @@ class LandingPageTest extends TestCase
     public function test_la_landing_incluye_schema_local_business_y_faq(): void
     {
         $this->seed(TipoEspacioSeeder::class);
+        $this->seed(FaqSeeder::class);
 
         $response = $this->get('/');
 
