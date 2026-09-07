@@ -242,9 +242,12 @@ cotizacion_items: id, cotizacion_id, tipo_espacio_id, tipo_malla_id, tramo_altur
 visitas:         id, cotizacion_id, equipo_id(null), fecha_agendada, ventana_horaria,
                  direccion, estado, notas, deleted_at
 
-// Etapas 2–3
-trabajos:        id, cotizacion_id, equipo_id, medidas_finales(json), total_final(int),
-                 firma_path, estado, finalizado_at
+// Etapas 2–3 — «OT» (Orden de Trabajo). Ver convención de dominio abajo.
+// El modelado definitivo de `trabajos` (doble FK cliente_id + cotizacion_id,
+// meses_mantencion, medidas, firma) se cierra en el sprint de Cotizaciones,
+// no está congelado aquí.
+trabajos:        id, cotizacion_id, cliente_id, equipo_id, medidas_finales(json),
+                 total_final(int), firma_path, estado, finalizado_at
 trabajo_fotos:   id, trabajo_id, tipo(enum: anclaje|tension|panoramica), foto_path,
                  tomada_at, lat, lng, aprobada(bool), revisada_por
 consumos:        id, trabajo_id, malla_ml, cable_acero_ml, fijaciones(int), costo_total(int)
@@ -259,6 +262,14 @@ galeria_items:   id, foto_path, titulo, tipo_espacio_id(nullable), orden, public
 site_contents:   id, key(unique), value(text nullable), grupo, label,
                  tipo(text|textarea), orden, timestamps
 faqs:            id, pregunta, respuesta, orden, publicada(bool), timestamps
+
+// Implementado Sprint 9 — entidad Clientes (§11 ter). clientes con SoftDeletes
+// (dato de negocio); cliente_direcciones sin SoftDeletes (cascada de BD al
+// forceDelete). El vínculo cotizaciones.cliente_id se agrega en el sprint de
+// Cotizaciones, no ahora.
+clientes:            id, nombre, telefono(null), email(null), notas(null),
+                     timestamps, deleted_at
+cliente_direcciones: id, cliente_id, direccion, etiqueta(null), timestamps
 ```
 
 **Índices:** `cotizaciones(estado, created_at)`, `trabajo_fotos(trabajo_id, tipo)`.
@@ -349,7 +360,8 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 6 | ✅ Deploy prod | Sitio en producción en `mallasarica.cl`, DNS propagado — **cerrado** |
 | 7 | ✅ Ajustes de contenido/negocio en la landing pedidos por el dueño (sección "Tipos de Malla" con 3 espesores + precios de referencia, sistemas de instalación Netzen/aluminio, redes sociales en footer, imagen del hero) — ver §4.1 | Sección Tipos de Malla + redes sociales + placeholder de marca del hero **implementados**, `pint --test` y `php artisan test` (70) verdes — **cerrado**. La foto real del Morro de Arica (insumo del dueño) es un swap de archivo posterior, no bloquea el cierre |
 | 8 | ✅ CRM «Sitio web»: contenido editable de la landing (Hero, Nosotros, mensaje de vigencia del PDF), FAQ editable, galería re-enlazada como sub-tab, **todo en base de datos** (tabla `site_contents` clave-valor + tabla `faqs`), sin editor de bloques. Nuevo chrome del admin = navbar horizontal del `diseño/dashboard-v1.pdf` (Resumen · Cotizaciones · Clientes · Calendario · Sitio web) con placeholders «Próximamente» para lo aún no construido — ver §11 bis | El dueño edita el título del Hero y una pregunta de FAQ desde el panel y se refleja en el sitio sin deploy — **cerrado**, `pint --test` y `php artisan test` (87) verdes |
-| 9–16 | CRM completo (dashboard Resumen, entidad Clientes con direcciones/instalaciones, Calendario interno y con Google, rediseño de Cotizaciones con folio y estados) — orden fijado por decisión del dueño: contenido primero (Sprint 8), Cotizaciones al final. Diseño de referencia: `diseño/dashboard-v1.pdf` (9 páginas) | Ver desglose sprint por sprint cuando se aborde cada uno |
+| 9 | ✅ Entidad **Clientes** (alta manual): `clientes` + `cliente_direcciones`, CRUD maestro-detalle en `/admin/clientes` — ver §11 quater. Convención de dominio OT/instalaciones/sin-TK anotada en §11 ter | El dueño da de alta un cliente con sus direcciones desde el panel — **cerrado**, `php artisan test` (95) y `pint --test` verdes |
+| 10–16 | CRM restante (dashboard Resumen, Calendario interno y con Google, rediseño de Cotizaciones con folio y estados + creación de OT al aceptar + historial en ficha de Cliente) — Cotizaciones al final. Diseño: `diseño/dashboard-v1.pdf` (9 páginas) | Ver desglose sprint por sprint cuando se aborde cada uno |
 | Final | Editor de páginas por bloques avanzado (ex-Sprint 5b, ver §11), al estilo WordPress + Otter Blocks — **última pieza del roadmap, después de todo el CRM** | Página editada por bloques desde el panel se refleja en el sitio sin deploy |
 
 > **Nota sobre el modelo de negocio (post-Sprint 7):** el cotizador automático (`CotizadorWizard`) permanece oculto — el dueño cotiza manualmente tras la visita técnica. Los precios de referencia por m² que ahora se muestran en la landing (sección "Tipos de Malla") son **contenido informativo**, no alimentan ningún cálculo del sistema. `CotizacionCalculatorService`, `tarifas` y `tipos_malla` (con su multiplicador) siguen existiendo tal cual, sin consumidor público activo.
@@ -414,4 +426,27 @@ Todo en la carpeta `./diseño`:
 
 **Tests (87 en verde):** `SiteContentServiceTest`, `ContenidoFormTest`, `FaqManagerTest`, `CrmNavegacionTest`, más los casos de vigencia en `CotizacionPdfDataBuilderTest` y el reseed de FAQ en `LandingPageTest`. `phpunit.xml` fuerza `CACHE_SITE_CONTENT_STORE=array` igual que `CACHE_TARIFAS_STORE`.
 
-**No se tocó** el esquema de Clientes / Cotizaciones / Calendario — eso va en sus propios sprints (9+).
+**No se tocó** el esquema de Cotizaciones / Calendario — eso va en sus propios sprints.
+
+### 11 ter. Convención de dominio del CRM (decidida por el dueño, Sprint 9)
+
+Flujo de negocio, de principio a fin:
+
+1. El cliente pide una cotización por **WhatsApp** o por la **landing** (que en la práctica lo lleva al chat de WhatsApp — el `CotizadorWizard` con precio automático sigue oculto, ver memoria `cotizador_oculto_formulario_contacto`).
+2. El dueño **da de alta el Cliente** en el panel (Sprint 9).
+3. El dueño **crea una Cotización** para **una dirección de ese cliente**. Estados de la cotización: `borrador → generada → aceptada → rechazada` (rediseño del sprint de Cotizaciones; hoy la tabla usa el enum viejo `borrador|contactado|agendado|cerrado|perdido`, ver §5).
+4. Cuando el cliente **acepta** la cotización, recién ahí se crea una **OT (Orden de Trabajo)** = tabla `trabajos`.
+   - La OT tiene **doble relación**: `cliente_id` **y** `cotizacion_id`. Con esa doble FK **no hacen falta tickets (TK)** — se descartó esa entidad.
+   - Una OT en estado **ejecutado** es lo que el mockup de la ficha de Cliente (`diseño/dashboard-v1.pdf` pág. 5) llama «instalación». **No hay tabla `instalaciones` separada**: es la misma OT en otro estado.
+   - La alerta «Mantención vencida» se calcula sobre la OT ejecutada (`finalizado_at + meses_mantencion < hoy`). `meses_mantencion` se agrega a `trabajos` en el sprint de Cotizaciones.
+5. El historial de OT ejecutadas y las cotizaciones relacionadas se muestran en la ficha del Cliente — **se implementa en el sprint de Cotizaciones**, cuando exista la doble relación.
+
+`trabajos`, `trabajo_fotos`, `consumos` y el vínculo `cotizaciones.cliente_id` **no se crearon en el Sprint 9** — su modelado definitivo se cierra en el sprint de Cotizaciones (el último del CRM). La app móvil de instaladores (Etapa 2) puebla las OT en terreno; las OT viejas pre-sistema las carga el dueño a mano.
+
+### 11 quater. Sprint 9 — entidad Clientes (implementado)
+
+- **`clientes`** (SoftDeletes — dato de seguimiento comercial) + **`cliente_direcciones`** (sin SoftDeletes; `cascadeOnDelete` de BD las limpia en `forceDelete` del cliente, no en el soft delete). Ver §5.
+- **`App\Livewire\Admin\Clientes\ClientesIndex`** (ruta `admin.clientes`, reemplaza el placeholder «Próximamente» del Sprint 8): una sola página maestro-detalle como el mockup — lista con buscador (`nombre`/`telefono`/`email`, `like`), y a la derecha el formulario del cliente seleccionado con sus direcciones agregables/quitables inline. `#[Url] $seleccionado` guarda el id en query string; un id inválido en la URL **no rompe la página** (se ignora en `mount`, no `findOrFail`). Guardado en `DB::transaction`: `updateOrCreate` por dirección + `whereNotIn` para borrar las quitadas. Eliminar cliente = soft delete.
+- **Alta manual únicamente.** El vínculo lead→cliente (matchear por teléfono, botón «convertir en cliente») se hace en el sprint de Cotizaciones.
+- **Fuera de alcance del Sprint 9:** historial de OT/instalaciones, alerta de mantención, «cotizaciones relacionadas» — todo depende de la OT (§11 ter). El Blade deja un comentario donde irán.
+- **Tests:** `ClientesIndexTest` (7 casos) + `CrmNavegacionTest` actualizado. `php artisan test` **95 en verde**, `pint --test` verde.
