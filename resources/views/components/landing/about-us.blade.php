@@ -3,7 +3,7 @@
         <div class="border-line aspect-[4/3] w-full overflow-hidden rounded-3xl border bg-white">
             <img
                 src="{{ asset('images/nosotros-placeholder.jpg') }}"
-                alt="Equipo de instalación de Mallas Arica"
+                alt="Equipo de instalación de Mallas Arica Jacob"
                 class="h-full w-full object-cover"
                 onerror="this.style.display='none'"
                 loading="lazy"
@@ -16,7 +16,7 @@
                 Locales de Arica, cuidando a las familias de Arica
             </h2>
             <p class="text-ink-soft mt-4 text-lg leading-relaxed">
-                Mallas Arica está 100% dedicada a dar tranquilidad y seguridad a tu hogar. Instalamos mallas para
+                Mallas Arica Jacob está 100% dedicada a dar tranquilidad y seguridad a tu hogar. Instalamos mallas para
                 terrazas, balcones y ventanas con el objetivo de proteger a niños, mascotas y adultos de posibles caídas.
             </p>
             <p class="text-ink-soft mt-4 text-lg leading-relaxed">

@@ -91,10 +91,10 @@
                 <table>
                     <tr>
                         <td style="width: 46px;">
-                            <img class="logo" src="{{ public_path('images/isologo.png') }}" alt="Mallas Arica">
+                            <img class="logo" src="{{ public_path('images/isologo.png') }}" alt="Mallas Arica Jacob">
                         </td>
                         <td>
-                            <p class="brand-nombre">Mallas Arica</p>
+                            <p class="brand-nombre">Mallas Arica Jacob</p>
                             <p class="brand-sub">Instalación de mallas de protección · Arica</p>
                         </td>
                     </tr>
@@ -113,7 +113,7 @@
         <tr>
             <td>
                 <p class="partes-label">EMPRESA</p>
-                <p class="partes-nombre">Mallas Arica</p>
+                <p class="partes-nombre">Mallas Arica Jacob</p>
                 <p class="partes-detalle">
                     RUT {{ $empresa['rut'] }} · {{ $empresa['direccion'] }}<br>
                     {{ $empresa['telefono'] }} · {{ $empresa['email'] }}
@@ -183,7 +183,7 @@
     </div>
 
     <p class="footer">
-        Mallas Arica · {{ $empresa['telefono'] }} · {{ $empresa['email'] }} · Gracias por su preferencia
+        Mallas Arica Jacob · {{ $empresa['telefono'] }} · {{ $empresa['email'] }} · Gracias por su preferencia
     </p>
 </body>
 </html>

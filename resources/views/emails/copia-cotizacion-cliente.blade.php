@@ -11,7 +11,7 @@
             <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
                 <tr>
                     <td style="background-color:#211D1C; padding:24px 28px;">
-                        <p style="color:#ffffff; font-size:18px; font-weight:bold; margin:0;">Mallas Arica</p>
+                        <p style="color:#ffffff; font-size:18px; font-weight:bold; margin:0;">Mallas Arica Jacob</p>
                         <p style="color:#FAF7F0; font-size:13px; margin:4px 0 0;">Instalación de mallas de protección · Arica</p>
                     </td>
                 </tr>
@@ -19,7 +19,7 @@
                     <td style="padding:28px;">
                         <p style="font-size:15px; color:#211D1C; margin:0 0 16px;">Hola {{ $cotizacion->nombre }},</p>
                         <p style="font-size:14px; color:#3A3533; line-height:1.6; margin:0 0 16px;">
-                            Gracias por contactar a Mallas Arica. Recibimos tu solicitud
+                            Gracias por contactar a Mallas Arica Jacob. Recibimos tu solicitud
                             <strong>N° {{ $cotizacion->numero }}</strong> y muy pronto te vamos a
                             escribir para coordinar la visita técnica gratuita.
                         </p>
@@ -48,7 +48,7 @@
                 <tr>
                     <td style="padding:16px 28px; background-color:#F3EAE1; text-align:center;">
                         <p style="font-size:11px; color:#3A3533; margin:0;">
-                            Mallas Arica · Av. Diego Portales #1333, Arica · +56 9 8645 5205 · contacto@mallasarica.cl
+                            Mallas Arica Jacob · Av. Diego Portales #1333, Arica · +56 9 8645 5205 · contacto@mallasarica.cl
                         </p>
                     </td>
                 </tr>

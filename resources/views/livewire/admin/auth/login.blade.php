@@ -1,5 +1,5 @@
 <div class="w-full max-w-sm rounded-2xl border border-line bg-white p-8 shadow-sm">
-    <p class="text-lg font-bold text-ink tracking-tight">Mallas Arica</p>
+    <p class="text-lg font-bold text-ink tracking-tight">Mallas Arica Jacob</p>
     <p class="mb-6 text-sm text-ink-soft">Ingresa al panel admin</p>
 
     @error('throttle')

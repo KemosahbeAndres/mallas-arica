@@ -6,14 +6,14 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="description" content="Instalación de mallas de seguridad certificadas en ventanas, balcones y terrazas en Arica. Cotiza en 30 segundos.">
 
-        <title>{{ $title ? "$title · Mallas Arica" : 'Mallas Arica · Mallas de seguridad certificadas' }}</title>
+        <title>{{ $title ? "$title · Mallas Arica Jacob" : 'Mallas Arica Jacob · Mallas de seguridad certificadas' }}</title>
 
         <link rel="canonical" href="{{ url()->current() }}">
         <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
 
         <meta property="og:type" content="website">
-        <meta property="og:site_name" content="Mallas Arica">
-        <meta property="og:title" content="{{ $title ? "$title · Mallas Arica" : 'Mallas Arica · Mallas de seguridad certificadas' }}">
+        <meta property="og:site_name" content="Mallas Arica Jacob">
+        <meta property="og:title" content="{{ $title ? "$title · Mallas Arica Jacob" : 'Mallas Arica Jacob · Mallas de seguridad certificadas' }}">
         <meta property="og:description" content="Instalación de mallas de seguridad certificadas en ventanas, balcones y terrazas en Arica. Cotiza en 30 segundos.">
         <meta property="og:url" content="{{ url()->current() }}">
         <meta property="og:image" content="{{ asset('images/isologo.png') }}">
@@ -24,7 +24,7 @@
             {!! json_encode([
                 '@context' => 'https://schema.org',
                 '@type' => 'LocalBusiness',
-                'name' => 'Mallas Arica',
+                'name' => 'Mallas Arica Jacob',
                 'image' => asset('images/isologo.png'),
                 'telephone' => '+56986455205',
                 'priceRange' => '$$',

@@ -23,7 +23,7 @@ class CopiaCotizacionCliente extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Tu solicitud N° {$this->cotizacion->numero} — Mallas Arica",
+            subject: "Tu solicitud N° {$this->cotizacion->numero} — Mallas Arica Jacob",
             replyTo: [config('mail.admin_address')],
         );
     }

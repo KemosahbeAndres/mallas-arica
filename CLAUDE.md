@@ -155,9 +155,9 @@ Tras calcular la cotización, el cliente tiene **dos botones de conversión** (y
 
 Fuente de verdad: `./diseño/cotizacion-v2.pdf`. Layout tipo factura/comprobante:
 
-- **Header:** isologo + wordmark "Mallas Arica" (subtítulo "Instalación de mallas de protección · Arica") a la izquierda; badge rojo `COTIZACIÓN` a la derecha, con **N°** correlativo de 4 dígitos y **Fecha** debajo.
+- **Header:** isologo + wordmark "Mallas Arica Jacob" (subtítulo "Instalación de mallas de protección · Arica") a la izquierda; badge rojo `COTIZACIÓN` a la derecha, con **N°** correlativo de 4 dígitos y **Fecha** debajo.
 - **Bloques EMPRESA / CLIENTE** lado a lado, fondo `--cream-deep`, etiqueta roja en mayúsculas (`EMPRESA`, `CLIENTE`):
-  - EMPRESA: razón social fija ("Mallas Arica"), RUT fijo, dirección fija (Av. Diego Portales #1333, Arica), teléfono y correo fijos de la empresa — **hardcodeado en la plantilla**, no viene de BD.
+  - EMPRESA: razón social fija ("Mallas Arica Jacob"), RUT fijo, dirección fija (Av. Diego Portales #1333, Arica), teléfono y correo fijos de la empresa — **hardcodeado en la plantilla**, no viene de BD.
   - CLIENTE: `nombre`, `direccion` (condominio/dirección del cliente), `telefono`, `email` de la cotización.
 - **Tabla de ítems** con header `--ink` (fondo negro, texto blanco): columnas `Descripción` | `P. unitario` | `Cant.` | `Subtotal`.
   - **Decisión:** `P. unitario` = `precio_ml_max_snapshot × multiplicador_snapshot` del ítem (el techo del rango, no el mínimo) — el PDF es un documento formal que el cliente puede mostrar a terceros; comprometerse al mínimo arriesga tener que cobrar más tras la visita técnica sin respaldo escrito. `Cant.` = `metros_lineales`. `Subtotal` = `precio_unitario × cantidad` (recalculado en la vista, no usa `subtotal_max` directo, para que la aritmética de la línea cierre visualmente).

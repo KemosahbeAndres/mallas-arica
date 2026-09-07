@@ -8,7 +8,7 @@
 
 <aside class="w-56 shrink-0 border-r border-line bg-ink">
     <div class="px-5 py-5">
-        <p class="text-lg font-bold text-white tracking-tight">Mallas Arica</p>
+        <p class="text-lg font-bold text-white tracking-tight">Mallas Arica Jacob</p>
         <p class="text-xs text-cream-deep/70">Panel admin</p>
     </div>
 

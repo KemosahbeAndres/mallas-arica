@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex, nofollow">
 
-        <title>{{ $title ? "$title · Admin Mallas Arica" : 'Admin · Mallas Arica' }}</title>
+        <title>{{ $title ? "$title · Admin Mallas Arica Jacob" : 'Admin · Mallas Arica Jacob' }}</title>
 
         <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
 

@@ -40,9 +40,9 @@
             </h2>
         </div>
 
-        <div class="border-line mt-12 divide-y divide-[var(--color-line)] rounded-2xl border bg-white">
+        <div class="mt-12 flex flex-col gap-4">
             @foreach ($preguntas as $index => $item)
-                <div x-data="{ open: false }">
+                <div x-data="{ open: false }" class="border-line overflow-hidden rounded-2xl border bg-white">
                     <button
                         type="button"
                         @click="open = !open"
@@ -51,7 +51,7 @@
                     >
                         <span class="text-ink font-semibold">{{ $item['pregunta'] }}</span>
                         <span
-                            class="text-ink-soft shrink-0 text-xl transition-transform"
+                            class="text-brand-red-ui shrink-0 text-xl transition-transform"
                             :class="{ 'rotate-45': open }"
                         >+</span>
                     </button>
