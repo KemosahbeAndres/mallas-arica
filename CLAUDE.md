@@ -64,8 +64,8 @@ App móvil (Etapa 2) ──► /api/v1/* (Sanctum) ──► mismos Services
 **Entorno de desarrollo:** se desarrolla en **Fedora**. Los comandos que deban ejecutarse en el host (fuera de un contenedor/sandbox, p. ej. para interactuar con el sistema gráfico o servicios del host) requieren `flatpak-spawn --host` como prefijo.
 
 **Dominios:**
-- Producción: `mallasarica.cl`
-- Desarrollo: `mallas.tinorte.cl` — el cambio de dominio a producción se hará más adelante, al desplegar.
+- Producción: `mallasarica.cl` — **DNS ya propagado**, apunta al VPS. Es el dominio oficial y público a usar en el deploy del Sprint 6.
+- Desarrollo: `mallas.tinorte.cl` — queda como dominio de desarrollo/staging únicamente.
 
 **Fase estática antes que CRM:** el MVP (Etapa 1) se construye con contenido **casi estático**, en páginas Livewire + Blade convencionales (sin editor de contenido, sin bloques dinámicos). El **CRM real se activa después** (ver §11) — no bloquear ni sobre-diseñar el Sprint 1–4 pensando en el editor de bloques; ese dinamismo se incorpora en una etapa posterior sin rehacer las páginas base si se respeta la separación de secciones del §4.1.
 
