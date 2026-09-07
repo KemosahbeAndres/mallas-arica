@@ -52,12 +52,14 @@
         </div>
 
         <div class="relative">
-            <div class="border-line/10 aspect-[4/5] w-full rounded-3xl border bg-white/5 lg:aspect-[5/6]">
+            <div class="border-line/10 aspect-[4/5] w-full overflow-hidden rounded-3xl border bg-white/5 lg:aspect-[5/6]">
+                {{-- Placeholder de marca. Reemplazar por la foto real con el Morro de Arica
+                     de fondo (insumo del dueño): subir el .jpg a public/images/ y cambiar
+                     el nombre del archivo abajo. --}}
                 <img
-                    src="{{ asset('images/hero-placeholder.jpg') }}"
-                    alt="Malla de seguridad instalada en balcón, Arica"
+                    src="{{ asset('images/hero-placeholder.svg') }}"
+                    alt="Malla de seguridad instalada con el Morro de Arica de fondo"
                     class="h-full w-full rounded-3xl object-cover"
-                    onerror="this.style.display='none'"
                     loading="eager"
                 >
             </div>

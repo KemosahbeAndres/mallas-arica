@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1200" viewBox="0 0 1000 1200" role="img" aria-label="Malla de seguridad instalada con el Morro de Arica de fondo">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#211D1C"/>
+      <stop offset="55%" stop-color="#3A2A26"/>
+      <stop offset="100%" stop-color="#5A3A30"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E53329" stop-opacity="0.45"/>
+      <stop offset="70%" stop-color="#E53329" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="mesh" width="46" height="46" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <path d="M0 0H46M0 0V46" stroke="#FAF7F0" stroke-opacity="0.14" stroke-width="1.5"/>
+    </pattern>
+  </defs>
+
+  <rect width="1000" height="1200" fill="url(#sky)"/>
+  <rect width="1000" height="620" fill="url(#glow)"/>
+
+  <!-- Sol bajo sobre el Pacífico -->
+  <circle cx="500" cy="560" r="120" fill="#FAF7F0" opacity="0.08"/>
+  <circle cx="500" cy="560" r="70" fill="#FAF7F0" opacity="0.12"/>
+
+  <!-- Silueta del Morro de Arica -->
+  <path d="M0 760 L0 620 L120 600 L280 540 L430 470 L470 455 L520 475 L540 620 L560 700 L720 690 L1000 720 L1000 760 Z"
+        fill="#1A1615"/>
+  <path d="M430 470 L470 455 L520 475 L505 500 L455 495 Z" fill="#2A2220"/>
+
+  <!-- Mar -->
+  <rect y="760" width="1000" height="440" fill="#161312"/>
+  <g stroke="#FAF7F0" stroke-opacity="0.05" stroke-width="2">
+    <line x1="80" y1="830" x2="360" y2="830"/>
+    <line x1="620" y1="880" x2="940" y2="880"/>
+    <line x1="180" y1="940" x2="520" y2="940"/>
+  </g>
+
+  <!-- Malla de seguridad en primer plano -->
+  <rect width="1000" height="1200" fill="url(#mesh)"/>
+
+  <!-- Marco de aluminio -->
+  <rect x="34" y="34" width="932" height="1132" fill="none" stroke="#FAF7F0" stroke-opacity="0.22" stroke-width="10"/>
+
+  <!-- Isotipo: dos cuadrados redondeados superpuestos -->
+  <g transform="translate(430 980)">
+    <rect x="0" y="0" width="86" height="86" rx="20" fill="#211D1C"/>
+    <rect x="44" y="44" width="86" height="86" rx="20" fill="#E53329"/>
+  </g>
+</svg>
