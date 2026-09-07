@@ -7,25 +7,35 @@
     @keydown.arrow-left.window="if (open) activo = (activo - 1 + total) % total"
 >
     <div class="mx-auto max-w-7xl px-6 py-20 lg:px-8">
-        <div class="max-w-2xl">
-            <p class="text-brand-red-ui text-sm font-bold tracking-wide uppercase">Galería</p>
-            <h2 class="text-ink mt-3 text-3xl font-extrabold tracking-[-0.02em] sm:text-4xl">
-                Trabajos que hablan por sí solos
-            </h2>
-            <p class="text-ink-soft mt-4 text-lg">
-                Una muestra de instalaciones reales en Arica. Tenemos más ejemplos disponibles por WhatsApp.
-            </p>
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div class="max-w-2xl">
+                <p class="text-brand-red-ui text-sm font-bold tracking-wide uppercase">Galería</p>
+                <h2 class="text-ink mt-3 text-3xl font-extrabold tracking-[-0.02em] sm:text-4xl">
+                    Trabajos que hablan por sí solos
+                </h2>
+            </div>
+
+            @if ($items->isNotEmpty())
+                <a
+                    href="https://wa.me/56986455205"
+                    target="_blank"
+                    rel="noopener"
+                    class="text-brand-red-ui inline-flex shrink-0 items-center gap-2 text-base font-semibold hover:underline"
+                >
+                    Ver más en WhatsApp →
+                </a>
+            @endif
         </div>
 
         @if ($items->isEmpty())
             <p class="text-ink-soft mt-12">Muy pronto vamos a publicar fotos de nuestros trabajos aquí.</p>
         @else
-            <div class="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div class="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3">
                 @foreach ($items as $index => $item)
                     <button
                         type="button"
                         @click="activo = {{ $index }}; open = true"
-                        class="group border-line relative aspect-square overflow-hidden rounded-2xl border bg-white {{ $index === 0 ? 'col-span-2 row-span-2' : '' }}"
+                        class="group border-line relative aspect-square overflow-hidden rounded-2xl border bg-white"
                     >
                         <img
                             src="{{ $item->url }}"
@@ -74,16 +84,5 @@
                 >&rarr;</button>
             </div>
         @endif
-
-        <div class="mt-10 text-center">
-            <a
-                href="https://wa.me/56986455205"
-                target="_blank"
-                rel="noopener"
-                class="text-brand-red-ui inline-flex items-center gap-2 text-base font-semibold hover:underline"
-            >
-                Ver más en WhatsApp →
-            </a>
-        </div>
     </div>
 </section>

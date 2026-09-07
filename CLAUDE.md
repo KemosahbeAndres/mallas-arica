@@ -64,8 +64,8 @@ App móvil (Etapa 2) ──► /api/v1/* (Sanctum) ──► mismos Services
 **Entorno de desarrollo:** se desarrolla en **Fedora**. Los comandos que deban ejecutarse en el host (fuera de un contenedor/sandbox, p. ej. para interactuar con el sistema gráfico o servicios del host) requieren `flatpak-spawn --host` como prefijo.
 
 **Dominios:**
-- Producción: `mallasarica.cl`
-- Desarrollo: `mallas.tinorte.cl` — el cambio de dominio a producción se hará más adelante, al desplegar.
+- Producción: `mallasarica.cl` — **DNS ya propagado**, apunta al VPS. Es el dominio oficial y público a usar en el deploy del Sprint 6.
+- Desarrollo: `mallas.tinorte.cl` — queda como dominio de desarrollo/staging únicamente.
 
 **Fase estática antes que CRM:** el MVP (Etapa 1) se construye con contenido **casi estático**, en páginas Livewire + Blade convencionales (sin editor de contenido, sin bloques dinámicos). El **CRM real se activa después** (ver §11) — no bloquear ni sobre-diseñar el Sprint 1–4 pensando en el editor de bloques; ese dinamismo se incorpora en una etapa posterior sin rehacer las páginas base si se respeta la separación de secciones del §4.1.
 
@@ -133,7 +133,7 @@ app/Livewire/
 > **Decisión de implementación (Sprint 3, cierre):** `LeadForm` tampoco se implementó como componente Livewire separado — honeypot y throttle viven dentro de `CotizadorWizard::persistirCotizacion()`, junto a la validación de `nombre`/`telefono`/`email` que ya usan ambos botones de conversión. El throttle es un `RateLimiter` de Laravel por IP (`cotizador:{ip}`, 5 intentos / 10 minutos); al superarlo, `persistirCotizacion()` devuelve `null` y agrega el error de validación `throttle`, mostrado en el formulario junto al honeypot.
 
 - El acordeón de FAQ y el menú móvil son **Alpine puro**, sin roundtrip a servidor.
-- Tarifas vigentes cacheadas en Redis (`appmallas:tarifas:v{n}`), invalidadas al guardar desde el admin → el cotizador **no toca la BD por tecla**.
+- **Tarifas vigentes cacheadas en Redis (implementado, Sprint 5):** `App\Services\TarifaCacheService` cachea la colección completa de tarifas vigentes (agrupada por `tipo_espacio_id:tramo_altura_id`) bajo la key `tarifas:v{n}`, con `REDIS_PREFIX=appmallas:` en prod la key real queda `appmallas:tarifas:v{n}` tal como se documentó originalmente aquí. Store de caché configurable vía `config('cache.tarifas_store')` (`CACHE_TARIFAS_STORE`, default `redis`) — separado del `CACHE_STORE` global porque desarrollo usa `database` para el default y las tarifas deben ir a Redis según esta sección. **Invalidación por versión incremental** (`Cache::increment('tarifas:version')`), no `Cache::forget`: evita servir datos viejos por una condición de carrera donde un `remember()` en vuelo que ya leyó de BD reescribiría la key justo después de un forget. La invalidación vive en `App\Observers\TarifaObserver` (`saved`, `deleted`), registrado en `AppServiceProvider::boot()` — cubre también cambios por tinker/comandos, no solo el admin. `CotizacionCalculatorService` consume `TarifaCacheService::buscar()` en vez de tocar la tabla `tarifas` directo → el cotizador **no toca la BD por tecla**.
 
 ### 4.5 Datos del cliente y persistencia del lead
 
@@ -155,9 +155,9 @@ Tras calcular la cotización, el cliente tiene **dos botones de conversión** (y
 
 Fuente de verdad: `./diseño/cotizacion-v2.pdf`. Layout tipo factura/comprobante:
 
-- **Header:** isologo + wordmark "Mallas Arica" (subtítulo "Instalación de mallas de protección · Arica") a la izquierda; badge rojo `COTIZACIÓN` a la derecha, con **N°** correlativo de 4 dígitos y **Fecha** debajo.
+- **Header:** isologo + wordmark "Mallas Arica Jacob" (subtítulo "Instalación de mallas de protección · Arica") a la izquierda; badge rojo `COTIZACIÓN` a la derecha, con **N°** correlativo de 4 dígitos y **Fecha** debajo.
 - **Bloques EMPRESA / CLIENTE** lado a lado, fondo `--cream-deep`, etiqueta roja en mayúsculas (`EMPRESA`, `CLIENTE`):
-  - EMPRESA: razón social fija ("Mallas Arica"), RUT fijo, dirección fija (Av. Diego Portales #1333, Arica), teléfono y correo fijos de la empresa — **hardcodeado en la plantilla**, no viene de BD.
+  - EMPRESA: razón social fija ("Mallas Arica Jacob"), RUT fijo, dirección fija (Av. Diego Portales #1333, Arica), teléfono y correo fijos de la empresa — **hardcodeado en la plantilla**, no viene de BD.
   - CLIENTE: `nombre`, `direccion` (condominio/dirección del cliente), `telefono`, `email` de la cotización.
 - **Tabla de ítems** con header `--ink` (fondo negro, texto blanco): columnas `Descripción` | `P. unitario` | `Cant.` | `Subtotal`.
   - **Decisión:** `P. unitario` = `precio_ml_max_snapshot × multiplicador_snapshot` del ítem (el techo del rango, no el mínimo) — el PDF es un documento formal que el cliente puede mostrar a terceros; comprometerse al mínimo arriesga tener que cobrar más tras la visita técnica sin respaldo escrito. `Cant.` = `metros_lineales`. `Subtotal` = `precio_unitario × cantidad` (recalculado en la vista, no usa `subtotal_max` directo, para que la aritmética de la línea cierre visualmente).
@@ -187,6 +187,15 @@ Fuente de verdad: `./diseño/cotizacion-v2.pdf`. Layout tipo factura/comprobante
 
 No se tuvo acceso al listado real de URLs de producción del sitio Wix anterior (§7 "Migración desde Wix" lo daba por pendiente). `routes/web.php` define redirects 301 para las rutas típicas de un sitio Wix de landing — `/page4` (explícitamente reportada como rota en la navegación original), `/servicios`, `/cotizar`, `/cotizacion`, `/galeria`, `/nosotros`, `/contacto`, `/preguntas-frecuentes`, `/faq`, `/home`, `/index` — todas apuntando a la sección equivalente de la página única (`/#seccion`) o a `/`. **Pendiente:** revisar los logs de acceso de Wix (o Google Search Console) tras el corte de DNS para detectar rutas 404 no cubiertas por este mapa y agregarlas.
 
+### 4.11 Panel admin (implementado, Sprint 5)
+
+- **Auth propia, sin Breeze/Filament:** `App\Livewire\Admin\Auth\Login` (componente de clase, `Auth::attempt()` nativo) sobre el guard `web` estándar. Se descartó Breeze porque su instalador (`php artisan breeze:install livewire`) pisa el pipeline Tailwind 4 CSS-first del proyecto (reemplaza `resources/css/app.css`/`vite.config.js` por Tailwind 3 clásico + `tailwind.config.js`), y usa Livewire Volt en vez de componentes de clase, inconsistente con el resto del proyecto. Mismo patrón de throttle que `CotizadorWizard::persistirCotizacion()` (`RateLimiter` por IP, clave `admin-login:{ip}`, 5 intentos/10 min), con `RateLimiter::clear()` en éxito. **Sin registro público en ningún momento** — `bootstrap/app.php` declara `redirectGuestsTo(fn () => route('admin.login'))`.
+- **Alta del admin:** único punto de verdad en `App\Support\AdminUserManager::crear()`, usado por `database/seeders/AdminUserSeeder` (lee `ADMIN_EMAIL`/`ADMIN_PASSWORD`/`ADMIN_NAME` del `.env`) y por `php artisan app:crear-admin` (interactivo por defecto, o `--from-env`/`--email`/`--password` para uso no interactivo en deploy).
+- **Rutas** bajo `/admin/*` (`routes/web.php`): `/admin/login` (guest), `/admin/tarifas`, `/admin/leads`, `/admin/leads/{cotizacion}`, `/admin/galeria` (auth). Layout propio `resources/views/components/layouts/admin.blade.php` — independiente del layout público (ese trae navbar/footer/SEO de marketing), reusa el mismo `@vite`/tokens de marca, con sidebar (`x-admin.sidebar`) solo cuando hay sesión.
+- **CRUD Tarifas** (`App\Livewire\Admin\Tarifas\TarifasMatriz`): matriz única tipo_espacio × tramo_altura con inputs inline de precio min/max y botón guardar por celda. El MVP **solo edita la tarifa vigente actual** (sin UI de historial de vigencias): cada guardado hace `Tarifa::updateOrCreate(..., ['vigente_desde' => hoy], ...)`, respetando el UNIQUE existente — si la tarifa vigente era de una fecha anterior, esto crea una fila nueva con `vigente_desde` de hoy sin cerrar `vigente_hasta` de la anterior (la lectura por `orderByDesc('vigente_desde')` siempre toma la más reciente, así que no hay bug de lectura, solo acumulación histórica sin curar — aceptable para este MVP).
+- **CRUD Leads** (`App\Livewire\Admin\Leads\LeadsIndex` + `LeadDetalle`): listado paginado con filtro por `estado` (`Cotizacion::ESTADOS`, constante nueva que centraliza los 5 valores — antes solo vivían en el enum de la migración), vista de detalle con los items de la cotización y cambio de estado vía `<select>`. **Sin editar los datos del cliente ni eliminar leads** en este sprint (soft delete existente se reserva para mantenimiento, no expuesto en esta UI).
+- **CRUD Galería** (`App\Livewire\Admin\Galeria\GaleriaIndex` + `GaleriaForm`): alta/edición con `WithFileUploads` (mismo patrón que se reutilizará en Etapa 2 para `trabajo_fotos` — `$foto->store('galeria', 'public')`), toggle publicado, reordenar con botones ↑/↓ (swap del campo `orden` en `DB::transaction()`, sin drag-and-drop — no hay librería JS para eso instalada), y **hard delete real** (fila + archivo en disco) porque `galeria_items` no tiene SoftDeletes (ver §5).
+
 ---
 
 ## 5. Esquema de base de datos
@@ -200,6 +209,11 @@ tramos_altura:   id, etiqueta, altura_min(decimal), altura_max(nullable), requie
 tarifas:         id, tipo_espacio_id, tramo_altura_id, precio_ml_min(int), precio_ml_max(int),
                  vigente_desde(date), vigente_hasta(nullable)
                  UNIQUE(tipo_espacio_id, tramo_altura_id, vigente_desde)
+                 // El admin de tarifas (Sprint 5, §4.11) escribe filas nuevas con
+                 // vigente_desde = hoy en cada guardado, en vez de mutar vigente_hasta
+                 // de la fila anterior — la lectura (TarifaCacheService) siempre toma
+                 // la de vigente_desde más reciente por combinación, así que no hay
+                 // bug de lectura, solo historial sin curar (aceptable para el MVP).
 
 // Transaccional — cotizaciones, cotizacion_items y visitas usan SoftDeletes (ver nota abajo)
 cotizaciones:    id, uuid, nombre, telefono, email(null), direccion(null),
@@ -316,11 +330,14 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 2 | Layout, tokens Tailwind, secciones estáticas 1–5 y 8–10 | Lighthouse ≥ 95 mobile |
 | 3 | ✅ `CotizadorWizard` + `PanelPrecio` + persistencia de lead + handoff WhatsApp + descarga PDF + honeypot/throttle | Lead guardado aunque no se envíe el WhatsApp — **cerrado** |
 | 4 | ✅ Galería (filesystem local) + FAQ + SEO/schema + 301 | Sitemap indexable — **cerrado** |
-| 5 | Panel admin: tarifas, leads, galería (Etapa 3 parcial) | El papá cambia un precio sin tocar código |
+| 5 | ✅ Panel admin: tarifas, leads, galería (Etapa 3 parcial) — ver §4.11 | El papá cambia un precio sin tocar código — **cerrado**, verificado con `php artisan test` (70 tests) |
 | 5b | *(Etapa CRM, posterior)* Editor de páginas por bloques (ver §11) | Página editada desde el panel se refleja en el sitio sin deploy |
+| 5c | ✅ Correo transaccional (Resend + Cloudflare Email Routing) — ver `plan-correo.md` | Código listo y testeado (`php artisan test`, Pint verde); **pendiente la configuración externa** (Cloudflare Email Routing, dominio verificado en Resend, secrets en el VPS) antes de verificar el circuito completo (§6 de `plan-correo.md`) — **cerrado del lado del repositorio** |
 | 6 | Deploy prod + monitoreo (Uptime Kuma) + 1 semana en paralelo con Wix | Corte de DNS |
 
 > Sprint 1 antes que cualquier pixel. Si la fórmula de precio cambia después de tener UI, se rehace la UI.
+>
+> **Sprint 5c antes que el Sprint 6:** el dueño necesita enterarse de leads reales por correo durante la semana en paralelo con Wix, no solo después del corte de DNS. Documento de referencia completo: `./plan-correo.md`.
 
 ---
 

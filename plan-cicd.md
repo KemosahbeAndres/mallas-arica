@@ -1,4 +1,4 @@
-# SIGMA — Infraestructura Docker y CI/CD
+# Mallas Arica — Infraestructura Docker y CI/CD
 
 > Documento de implementación. Anexo al `CLAUDE.md` (§7 Infraestructura y despliegue).
 > Cubre el pipeline completo: build en GitHub Actions → GHCR → despliegue por SSH en VPS OpenCloud.
@@ -9,10 +9,10 @@
 
 | Decisión | Valor | Razón |
 |---|---|---|
-| Proyecto (código / repo) | `sigma` | Nombre del repositorio y de la imagen en GHCR |
+| Proyecto (código / repo) | `mallas-arica` | Nombre del repositorio y de la imagen en GHCR |
 | Directorio en el VPS | `/opt/mallas-arica/` | Convención de nombres del servidor |
 | Contenedor de la app | `mallas-arica-app` | Un único contenedor nuevo |
-| MariaDB | **Compartida** (instancia preexistente) | DB lógica propia `sigma_prod` |
+| MariaDB | **Compartida** (instancia preexistente) | DB lógica propia `appmallas_prod` |
 | Redis | **Compartido** (instancia preexistente) | Índices 0 (cache) y 1 (sesiones) |
 | Red de Traefik | `proxy` | Externa, ya existente |
 | Red de datos | `backend-shared` | Externa — **⚠ VERIFICAR, ver §0.1** |
@@ -66,15 +66,15 @@ git push origin main
 └──────────────────────────────────────────────────────────────┘
         │
         ▼
-┌────────────────────── VPS OpenCloud ─────────────────────────┐
-│                                                              │
-│  Traefik (red: proxy, certresolver: myle)                    │
-│      └─► mallas-arica-app  [límite 1 GB]                     │
-│            nginx + php-fpm + scheduler (supervisord)         │
-│              ├─► mariadb  (red: backend-shared) sigma_prod   │
-│              ├─► redis    (red: backend-shared) db 0-1       │
-│              └─► volumen: mallas-arica-storage               │
-│                                                              │
+┌──────────────────────── VPS OpenCloud ────────────────────────┐
+│                                                               │
+│  Traefik (red: proxy, certresolver: myle)                     │
+│      └─► mallas-arica-app  [límite 1 GB]                      │
+│            nginx + php-fpm + scheduler (supervisord)          │
+│              ├─► mariadb  (red: backend-shared) appmallas_prod│
+│              ├─► redis    (red: backend-shared) db 0-1        │
+│              └─► volumen: mallas-arica-storage                │
+└───────────────────────────────────────────────────────────────┘
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -105,7 +105,7 @@ git push origin main
 ## 3. Archivos a crear
 
 ```
-sigma/                                  (repositorio)
+mallas-arica/                           (repositorio)
 ├── .dockerignore
 ├── .github/
 │   └── workflows/
@@ -194,8 +194,8 @@ WORKDIR /var/www/html
 
 # --- Configuración de servicios ---
 COPY docker/prod/nginx.conf        /etc/nginx/nginx.conf
-COPY docker/prod/php.ini           /usr/local/etc/php/conf.d/99-sigma.ini
-COPY docker/prod/php-fpm-pool.conf /usr/local/etc/php-fpm.d/zz-sigma.conf
+COPY docker/prod/php.ini           /usr/local/etc/php/conf.d/99-mallas-arica.ini
+COPY docker/prod/php-fpm-pool.conf /usr/local/etc/php-fpm.d/zz-mallas-arica.conf
 COPY docker/prod/supervisord.conf  /etc/supervisor/supervisord.conf
 COPY docker/prod/entrypoint.sh     /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
@@ -441,14 +441,14 @@ stderr_logfile_maxbytes=0
 
 ```sh
 #!/bin/sh
-# Entrypoint de producción de SIGMA.
+# Entrypoint de producción de Mallas Arica.
 # Responsabilidades: validar entorno, esperar dependencias, cachear.
 # NO corre migraciones: eso es un paso explícito del pipeline de deploy,
 # para que un fallo de migración sea visible y no un reinicio en bucle.
 
 set -e
 
-echo "[entrypoint] SIGMA ${APP_VERSION:-dev} — arrancando"
+echo "[entrypoint] Mallas Arica ${APP_VERSION:-dev} — arrancando"
 
 # --- 1. Validación de APP_KEY (aborto explícito, nunca regeneración) ---
 # Regenerar la clave invalidaría sesiones y cualquier campo cifrado en BD.
@@ -578,7 +578,7 @@ docker-compose.override.yml
 ### 4.1 `/opt/mallas-arica/docker-compose.yml`
 
 ```yaml
-# SIGMA — producción.
+# Mallas Arica — producción.
 # MariaDB y Redis son instancias COMPARTIDAS preexistentes en el VPS.
 # Este stack levanta únicamente el contenedor de la aplicación.
 # Las imágenes NUNCA se construyen aquí: se traen de GHCR.
@@ -698,20 +698,20 @@ Y eliminar `BACKEND_NETWORK` del `.env`. Menos superficie de red, un fallo menos
 
 ```bash
 # ==========================================
-# SIGMA — producción. NUNCA versionar.
+# Mallas Arica — producción. NUNCA versionar.
 # chmod 600 /opt/mallas-arica/.env
 # ==========================================
 
 # --- Despliegue ---
 COMPOSE_PROJECT_NAME=mallas-arica
 GITHUB_OWNER=tu-usuario-github
-IMAGE_NAME=sigma
+IMAGE_NAME=mallas-arica
 IMAGE_TAG=latest                    # el pipeline lo sobrescribe con sha-<commit>
 APP_DOMAIN=mallas.tinorte.cl
 BACKEND_NETWORK=backend-shared      # ← VERIFICAR (§0.1)
 
 # --- Aplicación ---
-APP_NAME=SIGMA
+APP_NAME=Mallas Arica
 APP_ENV=production
 APP_KEY=                            # php artisan key:generate --show
 APP_DEBUG=false
@@ -732,11 +732,11 @@ LOG_LEVEL=warning
 DB_CONNECTION=mysql
 DB_HOST=mariadb
 DB_PORT=3306
-DB_DATABASE=sigma_prod
-DB_USERNAME=sigma_prod
+DB_DATABASE=appmallas_prod
+DB_USERNAME=appmallas_prod
 DB_PASSWORD=
 
-# --- Redis (instancia compartida, índices 0-1 reservados a SIGMA) ---
+# --- Redis (instancia compartida, índices 0-1 reservados a Mallas Arica) ---
 REDIS_CLIENT=phpredis
 REDIS_HOST=redis
 REDIS_PORT=6379
@@ -781,16 +781,16 @@ sudo chown -R deploy:deploy /opt/mallas-arica
 
 # 2. DB y usuario dedicados en la MariaDB compartida
 docker exec -it mariadb mariadb -uroot -p -e "
-  CREATE DATABASE sigma_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-  CREATE USER 'sigma_prod'@'%' IDENTIFIED BY 'CAMBIAR_POR_PASSWORD_FUERTE';
-  GRANT ALL PRIVILEGES ON sigma_prod.* TO 'sigma_prod'@'%';
+  CREATE DATABASE appmallas_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  CREATE USER 'appmallas_prod'@'%' IDENTIFIED BY 'CAMBIAR_POR_PASSWORD_FUERTE';
+  GRANT ALL PRIVILEGES ON appmallas_prod.* TO 'appmallas_prod'@'%';
   FLUSH PRIVILEGES;"
 
 # 3. Autenticar Docker contra GHCR (PAT clásico con scope read:packages)
 echo "$GHCR_PAT" | docker login ghcr.io -u TU_USUARIO --password-stdin
 
 # 4. Copiar el .env de §4.2, generar APP_KEY y pegarla
-docker run --rm ghcr.io/TU_USUARIO/sigma:latest php artisan key:generate --show
+docker run --rm ghcr.io/TU_USUARIO/mallas-arica:latest php artisan key:generate --show
 
 # 5. Proteger el archivo
 chmod 600 /opt/mallas-arica/.env
@@ -845,9 +845,9 @@ use Illuminate\Http\Request;
 Generar el par de claves para el deploy:
 
 ```bash
-ssh-keygen -t ed25519 -C "gh-actions-sigma" -f ~/.ssh/sigma_deploy -N ""
-ssh-copy-id -i ~/.ssh/sigma_deploy.pub deploy@VPS_HOST
-cat ~/.ssh/sigma_deploy     # → pegar en el secret VPS_SSH_KEY
+ssh-keygen -t ed25519 -C "gh-actions-mallas-arica" -f ~/.ssh/mallas_arica_deploy -N ""
+ssh-copy-id -i ~/.ssh/mallas_arica_deploy.pub deploy@VPS_HOST
+cat ~/.ssh/mallas_arica_deploy     # → pegar en el secret VPS_SSH_KEY
 ```
 
 ---
@@ -884,8 +884,8 @@ jobs:
       mariadb:
         image: mariadb:11
         env:
-          MARIADB_DATABASE: sigma_test
-          MARIADB_USER: sigma
+          MARIADB_DATABASE: appmallas_test
+          MARIADB_USER: appmallas
           MARIADB_PASSWORD: secret
           MARIADB_ROOT_PASSWORD: root
         ports:
@@ -940,8 +940,8 @@ jobs:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
-          DB_DATABASE: sigma_test
-          DB_USERNAME: sigma
+          DB_DATABASE: appmallas_test
+          DB_USERNAME: appmallas
           DB_PASSWORD: secret
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: 6379
@@ -1075,7 +1075,7 @@ docker compose exec -T app php artisan db:seed --force           # catálogos de
 cd /opt/mallas-arica
 
 # Ver tags disponibles
-docker images ghcr.io/TU_USUARIO/sigma --format '{{.Tag}}\t{{.CreatedSince}}'
+docker images ghcr.io/TU_USUARIO/mallas-arica --format '{{.Tag}}\t{{.CreatedSince}}'
 
 sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=sha-abc1234|" .env
 docker compose up -d --wait
@@ -1127,17 +1127,17 @@ docker run --rm \
 php artisan route:cache && php artisan route:clear
 
 # 2. Build de la imagen (en Fedora, nunca en el VPS)
-docker build -f docker/prod/Dockerfile -t sigma-app:test .
+docker build -f docker/prod/Dockerfile -t mallas-arica-app:test .
 
 # 3. El entrypoint debe abortar sin APP_KEY (código de salida 1)
-docker run --rm -e APP_ENV=production sigma-app:test; echo "exit=$?"
+docker run --rm -e APP_ENV=production mallas-arica-app:test; echo "exit=$?"
 
 # 4. Auditar que .env no entró a la imagen
-docker run --rm --entrypoint sh sigma-app:test -c 'ls -la /var/www/html/.env 2>&1'
+docker run --rm --entrypoint sh mallas-arica-app:test -c 'ls -la /var/www/html/.env 2>&1'
 # Esperado: "No such file or directory"
 
 # 5. Tamaño resultante (objetivo: < 250 MB)
-docker images sigma-app:test --format '{{.Size}}'
+docker images mallas-arica-app:test --format '{{.Size}}'
 ```
 
 ---
@@ -1161,7 +1161,7 @@ docker images sigma-app:test --format '{{.Size}}'
 - [ ] `/opt/mallas-arica/` creado y con owner `deploy`
 - [ ] Usuario SSH `deploy` con clave pública instalada y acceso al grupo `docker`
 - [ ] `docker login ghcr.io` con PAT (`read:packages`)
-- [ ] DB `sigma_prod` + usuario dedicado creados
+- [ ] DB `appmallas_prod` + usuario dedicado creados
 - [ ] `.env` completo, con `APP_KEY`, en `chmod 600`
 - [ ] `docker-compose.yml` copiado
 - [ ] DNS de `mallas.tinorte.cl` apuntando al VPS

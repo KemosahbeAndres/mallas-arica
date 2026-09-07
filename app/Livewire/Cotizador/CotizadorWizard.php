@@ -2,13 +2,14 @@
 
 namespace App\Livewire\Cotizador;
 
+use App\Jobs\EnviarNotificacionesCotizacion;
 use App\Models\Cotizacion;
 use App\Models\TipoEspacio;
 use App\Models\TipoMalla;
 use App\Models\TramoAltura;
 use App\Services\CotizacionCalculatorService;
-use App\Services\CotizacionPdfDataBuilder;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\CotizacionPdfService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -129,16 +130,11 @@ class CotizadorWizard extends Component
 
         $this->numeroGenerado = $cotizacion->numero;
 
-        $datos = app(CotizacionPdfDataBuilder::class)->construir($cotizacion);
-
-        $pdf = Pdf::loadView('pdf.cotizacion', [
-            'cotizacion' => $cotizacion,
-            ...$datos,
-        ]);
+        $pdfService = app(CotizacionPdfService::class);
 
         return response()->streamDownload(
-            fn () => print ($pdf->output()),
-            "cotizacion-{$cotizacion->numero}.pdf",
+            fn () => print ($pdfService->render($cotizacion)),
+            $pdfService->nombreArchivo($cotizacion),
         );
     }
 
@@ -200,7 +196,23 @@ class CotizadorWizard extends Component
             ]);
         }
 
+        $this->notificarCotizacion($cotizacion);
+
         return $cotizacion;
+    }
+
+    private function notificarCotizacion(Cotizacion $cotizacion): void
+    {
+        // El correo es un efecto secundario: si el dispatch falla (Redis caído),
+        // la cotización ya está persistida y el flujo de conversión sigue intacto.
+        try {
+            EnviarNotificacionesCotizacion::dispatch($cotizacion)->afterResponse();
+        } catch (\Throwable $e) {
+            Log::error('No se pudo encolar la notificación de cotización', [
+                'cotizacion_id' => $cotizacion->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function construirUrlWhatsapp(Cotizacion $cotizacion, bool $requiereVisita): string

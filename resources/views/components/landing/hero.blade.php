@@ -26,7 +26,7 @@
                     href="#cotizador"
                     class="bg-brand-red-ui hover:bg-brand-red-dark inline-flex items-center justify-center rounded-full px-7 py-3.5 text-base font-semibold text-white transition-colors"
                 >
-                    Cotizar en 30 segundos
+                    Solicitar cotización
                 </a>
                 <a
                     href="https://wa.me/56986455205"

@@ -4,7 +4,9 @@
     <x-landing.protection-grid />
     <x-landing.how-we-work />
 
-    <livewire:cotizador.cotizador-wizard />
+    {{-- Cotizador en línea oculto por ahora: se cotiza en terreno tras la visita técnica --}}
+    {{-- <livewire:cotizador.cotizador-wizard /> --}}
+    <livewire:solicitud-contacto />
 
     <livewire:galeria-mosaico />
 
