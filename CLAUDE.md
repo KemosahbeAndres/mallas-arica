@@ -78,18 +78,23 @@ App móvil (Etapa 2) ──► /api/v1/* (Sanctum) ──► mismos Services
 2. **Hero** — badge `🛡 Mallas de seguridad certificadas · Arica`, H1 con "tranquilidad" en rojo, 2 CTA (`Cotizar 30 segundos` / `Agendar visita`), 3 checks de confianza
 3. **Barra de atributos** — Transparente · 200 kg/m² · Filtro UV · Rápida
 4. **Qué protegemos** — grid 3×2 de los 6 tipos
-5. **Cómo trabajamos** — 4 pasos numerados
-6. **Cotizador** — split: formulario (izq, crema) + panel de precio (der, `--ink`, sticky)
-7. **Galería** — grid mosaico + "Ver más en WhatsApp →"
-8. **Nosotros** — texto + dirección Av. Diego Portales #1333 + teléfono + medios de pago
-9. **FAQ** — acordeón, 7 preguntas (incluye medios de pago)
-10. **CTA final + Footer** — `--ink`
+5. **Tipos de malla** (implementado, Sprint 7) — 3 espesores con precios/specs de referencia + 2 sistemas de instalación
+6. **Cómo trabajamos** — 4 pasos numerados
+7. **Cotizador** — split: formulario (izq, crema) + panel de precio (der, `--ink`, sticky)
+8. **Galería** — grid mosaico + "Ver más en WhatsApp →"
+9. **Nosotros** — texto + dirección Av. Diego Portales #1333 + teléfono + medios de pago
+10. **FAQ** — acordeón, 7 preguntas (incluye medios de pago)
+11. **CTA final + Footer** — `--ink`, incluye íconos de redes sociales (Facebook/Instagram, Sprint 7)
 
 > **Corrección de contenido (post-Sprint 3):** la **visita técnica** (medir y cotizar) y la **instalación** son dos citas distintas, agendadas por separado — nunca "el mismo día" el uno del otro.
 >
 > **No comprometer una duración de instalación en horas ni en "una mañana"** — cada trabajo es distinto y fijar un plazo es un riesgo comercial. El mensaje correcto es **"instalación rápida"** sin cuantificar, combinado con **confianza y puntualidad**: llegamos a la hora acordada, siempre respondemos. Evitar "mismo día" y evitar rangos de horas (ej. "3 a 5 horas") en cualquier copy nuevo.
 >
 > **Medios de pago (agregado post-Sprint 3):** se acepta efectivo, transferencia bancaria y tarjetas de débito/crédito hasta 3 cuotas, pagados en terreno al finalizar la instalación. Mencionado en Hero (check de confianza), Nosotros y FAQ. Sigue sin existir integración de pago online (Transbank queda fuera del MVP, ver §1 decisión #7).
+>
+> **Sección "Tipos de malla" (implementado, Sprint 7, pedido directo del dueño):** `resources/views/components/landing/mesh-types.blade.php`, ubicada entre "Qué protegemos" y "Cómo trabajamos". Muestra **3 espesores** (0,80 mm rombo 5×5 cm, $25.000/m² de referencia; 0,90 mm rombo 3×3 cm para gatitos pequeños, soporta 250 kg/m²; 1,9 mm rombo 4×4 cm para gatitos mordedores, soporta 300 kg/m²) — **contenido estático hardcodeado en el Blade, no consulta el modelo `TipoMalla`** (que solo tiene 2 tipos por uso: Estándar/Reforzada mascotas, usados por el cálculo de tarifas ya oculto al público). Los precios mostrados son **de referencia/marketing únicamente**, no alimentan `CotizacionCalculatorService` ni ningún cálculo real — el negocio cotiza manualmente. Incluye además 2 sistemas de instalación: ángulos de aluminio 20×20×1,2 mm con amarres de alambre galvanizado (estándar), y **Sistema Netzen** con arpones de poliamida, "a pedido", explícitamente descrito como **certificado internacionalmente** (badge rojo). **Pendiente:** reemplazar la imagen del hero (`images/hero-placeholder.jpg`, hoy inexistente en disco) por una foto real con el Morro de Arica de fondo — bloqueado hasta recibir el archivo del dueño.
+>
+> **Redes sociales (implementado, Sprint 7):** footer con íconos de Facebook (`facebook.com/mallas.arica`) e Instagram (`instagram.com/mallas_arica_jacob`), SVG inline (sin librería de íconos externa).
 
 ### 4.2 Modelo de cálculo (el cambio crítico)
 
@@ -333,8 +338,12 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 5 | ✅ Panel admin: tarifas, leads, galería (Etapa 3 parcial) — ver §4.11 | El papá cambia un precio sin tocar código — **cerrado**, verificado con `php artisan test` (70 tests) |
 | 5b | *(Etapa CRM, posterior)* Editor de páginas por bloques (ver §11) | Página editada desde el panel se refleja en el sitio sin deploy |
 | 5c | ✅ Correo transaccional (Resend + Cloudflare Email Routing) — ver `plan-correo.md` | Código listo y testeado (`php artisan test`, Pint verde); **pendiente la configuración externa** (Cloudflare Email Routing, dominio verificado en Resend, secrets en el VPS) antes de verificar el circuito completo (§6 de `plan-correo.md`) — **cerrado del lado del repositorio** |
-| 6 | Deploy prod + monitoreo (Uptime Kuma) + 1 semana en paralelo con Wix | Corte de DNS |
+| 6 | ✅ Deploy prod | Sitio en producción en `mallasarica.cl`, DNS propagado — **cerrado** |
+| 7 | 🔶 Ajustes de contenido/negocio en la landing pedidos por el dueño (sección "Tipos de Malla" con 3 espesores + precios de referencia, sistemas de instalación Netzen/aluminio, redes sociales en footer, imagen del hero con el Morro de Arica) — ver `§4.1 bis` y detalle completo en el plan de sesión | Sección Tipos de Malla + redes sociales **implementados**; **pendiente** solo la foto real del Morro de Arica (insumo del dueño) para completar el hero |
+| 8–16 | CRM completo (editor de contenido del sitio, imágenes editables, FAQ editable, dashboard Resumen, entidad Clientes, Calendario interno y con Google, rediseño de Cotizaciones) — orden fijado por decisión del dueño: contenido primero, Cotizaciones al final | Ver plan de sesión guardado para el desglose sprint por sprint y las decisiones de diseño cerradas |
 
+> **Nota sobre el modelo de negocio (post-Sprint 7):** el cotizador automático (`CotizadorWizard`) permanece oculto — el dueño cotiza manualmente tras la visita técnica. Los precios de referencia por m² que ahora se muestran en la landing (sección "Tipos de Malla") son **contenido informativo**, no alimentan ningún cálculo del sistema. `CotizacionCalculatorService`, `tarifas` y `tipos_malla` (con su multiplicador) siguen existiendo tal cual, sin consumidor público activo.
+>
 > Sprint 1 antes que cualquier pixel. Si la fórmula de precio cambia después de tener UI, se rehace la UI.
 >
 > **Sprint 5c antes que el Sprint 6:** el dueño necesita enterarse de leads reales por correo durante la semana en paralelo con Wix, no solo después del corte de DNS. Documento de referencia completo: `./plan-correo.md`.

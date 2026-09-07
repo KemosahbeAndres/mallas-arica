@@ -2,6 +2,7 @@
     <x-landing.hero />
     <x-landing.attribute-bar />
     <x-landing.protection-grid />
+    <x-landing.mesh-types />
     <x-landing.how-we-work />
 
     {{-- Cotizador en línea oculto por ahora: se cotiza en terreno tras la visita técnica --}}
