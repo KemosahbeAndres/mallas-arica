@@ -4,8 +4,10 @@
             <a href="{{ url('/') }}" class="flex items-center gap-3">
                 <x-icon.mark variant="inverted" class="h-8 w-8 shrink-0" />
                 <span class="flex flex-col leading-none font-extrabold tracking-tight uppercase">
-                    <span class="text-brand-red-ui text-base">Mallas</span>
-                    <span class="text-base text-white">Arica</span>
+                    <span class="text-base">
+                        <span class="text-brand-red-ui">Mallas</span>
+                        <span class="text-white">Arica</span>
+                    </span>
                     <span class="text-white/60 mt-0.5 text-[9px] font-bold tracking-[0.2em]">Jacob</span>
                 </span>
             </a>
