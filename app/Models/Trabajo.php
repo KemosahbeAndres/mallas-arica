@@ -22,6 +22,7 @@ class Trabajo extends Model
 
     protected $fillable = [
         'cliente_id',
+        'cliente_direccion_id',
         'cotizacion_id',
         'evento_id',
         'titulo',
@@ -42,6 +43,11 @@ class Trabajo extends Model
     public function cliente(): BelongsTo
     {
         return $this->belongsTo(Cliente::class);
+    }
+
+    public function clienteDireccion(): BelongsTo
+    {
+        return $this->belongsTo(ClienteDireccion::class);
     }
 
     public function cotizacion(): BelongsTo

@@ -122,9 +122,11 @@
                 @endif
             </div>
         </form>
-
-        {{-- El historial de OT (instalaciones ejecutadas) y las cotizaciones
-             relacionadas se agregan aquí en el sprint de Cotizaciones, cuando
-             exista la doble relación OT ↔ (cliente, cotización). --}}
     </div>
+
+    @if ($seleccionado)
+        <div class="lg:col-start-2">
+            <livewire:admin.clientes.cliente-historial :cliente-id="$seleccionado" :key="'historial-'.$seleccionado" />
+        </div>
+    @endif
 </div>

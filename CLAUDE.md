@@ -196,11 +196,16 @@ cotizacion_items: id, cotizacion_id, descripcion, precio_unitario(int),
 // «OT» (Orden de Trabajo) — §11 ter. Se crea al aceptar una cotización
 // (CotizacionEstadoService). Versión mínima: sin medidas/firma/fotos/consumos
 // (eso es Etapa 2, app móvil de instaladores).
-trabajos:        id, cliente_id(null), cotizacion_id(null), evento_id(null → eventos),
+trabajos:        id, cliente_id(null), cliente_direccion_id(null → cliente_direcciones),
+                 cotizacion_id(null), evento_id(null → eventos),
                  titulo, descripcion(null),
                  estado(pendiente|en_curso|ejecutada|cancelada),
                  meses_mantencion(smallint, default 12), finalizado_at(null),
                  timestamps, deleted_at
+                 // cliente_direccion_id (Sprint 13): se llena de la cotización
+                 // al crear la OT; agrupa las OT por dirección en la ficha de
+                 // Cliente. La OT apunta a su evento de agenda vía evento_id
+                 // (TrabajoService::agendar), no al revés.
 // trabajo_fotos / consumos: Etapa 2, no creados todavía.
 
 // Implementado Sprint 4 — foto_path es la ruta relativa en el disco `public`
@@ -325,7 +330,8 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 10 | ✅ **Calendario / agenda interna**: tabla `eventos` (genérica, preparada para Google Calendar), grilla mensual a mano + agendas semanal/mensual + CRUD de eventos en `/admin/calendario` — ver §11 quinquies. Google Calendar queda para su propio sprint | El dueño agenda un evento y lo ve en la grilla del mes — **cerrado**, `php artisan test` (110) y `pint --test` verdes |
 | 11 | ✅ **Dashboard Resumen** (`/admin/resumen`, home del admin): 4 KPIs + "trabajos de esta semana" (de `eventos`) + "últimas cotizaciones" — ver §11 sexies | **cerrado**, `php artisan test` (120) y `pint --test` verdes |
 | 12 | ✅ **Rediseño de Cotizaciones** — ver §11 septies. Se **eliminó** el motor de cálculo automático completo (cotizador público, `CotizacionCalculatorService`, tarifas, catálogos `tipos_*`, `tramos_altura`, `visitas`). El formulario del sitio crea un `Cliente`. Cotizaciones internas con ítems libres, estados `borrador→generada→aceptada→rechazada`, folio, PDF adaptado. Al aceptar → se crea la **OT** (`trabajos`) | El dueño arma una cotización a mano, la acepta y se crea la orden de trabajo — **cerrado**, `php artisan test` (96) y `pint --test` verdes |
-| 13–16 | CRM restante: sincronización con Google Calendar; historial de OT + cotizaciones + alerta de mantención en la ficha de Cliente; agenda de OT en el Calendario (`trabajos.evento_id`). Diseño: `diseño/dashboard-v1.pdf` | Ver desglose cuando se aborde cada uno |
+| 13 | ✅ **Ficha de Cliente completa** — ver §11 octies. OT agrupadas por dirección con editor de estado / fecha de ejecución / meses de mantención + alerta "Mantención vencida"; cotizaciones relacionadas (lectura); **agendar la OT** (`trabajos.evento_id` → crea un `Evento`, `TrabajoService::agendar`). `trabajos` gana `cliente_direccion_id` | El dueño marca una OT como ejecutada, ve la alerta de mantención y la agenda en el calendario — **cerrado**, `php artisan test` (109) y `pint --test` verdes |
+| 14–16 | CRM restante: sincronización con Google Calendar (necesita credenciales OAuth); gestión de OT en su propia sección si el volumen lo pide; indicador de estado por cliente en la lista. Diseño: `diseño/dashboard-v1.pdf` | Ver desglose cuando se aborde cada uno |
 | Final | Editor de páginas por bloques avanzado (ex-Sprint 5b, ver §11), al estilo WordPress + Otter Blocks — **última pieza del roadmap, después de todo el CRM** | Página editada por bloques desde el panel se refleja en el sitio sin deploy |
 
 > **Nota sobre el modelo de negocio (post-Sprint 12):** el dueño cotiza **siempre a mano** en el panel. El motor de cálculo automático (`CotizacionCalculatorService`, `tarifas`, catálogos) se **eliminó**. Los precios de referencia por m² de la sección "Tipos de Malla" son **contenido informativo** hardcodeado, no alimentan nada.
@@ -403,7 +409,7 @@ Flujo de negocio, de principio a fin:
    - Una OT en estado **ejecutado** es lo que el mockup de la ficha de Cliente (`diseño/dashboard-v1.pdf` pág. 5) llama «instalación». **No hay tabla `instalaciones` separada**: es la misma OT en otro estado.
    - La alerta «Mantención vencida» se calcula sobre la OT ejecutada (`finalizado_at + meses_mantencion < hoy`). `meses_mantencion` se agrega a `trabajos` en el sprint de Cotizaciones.
 5. Cuando una OT se **agenda** (día + hora), genera un **`evento`** relacionado (§11 quinquies). **La OT apunta al evento** (`trabajos.evento_id`), no al revés — así el calendario es compatible con formatos estándar y con el futuro Google Calendar. También existen eventos **que no son OT**: llamar a un cliente, enviar una cotización → `evento` tipo `oficina`, sin OT.
-6. El historial de OT ejecutadas y las cotizaciones relacionadas se muestran en la ficha del Cliente — **se implementa en el sprint de Cotizaciones**, cuando exista la doble relación.
+6. El historial de OT (agrupadas por dirección, con estado / fecha de ejecución / alerta de mantención) y las cotizaciones relacionadas se muestran en la ficha del Cliente — **implementado en el Sprint 13** (§11 octies).
 
 `trabajos` (mínima) y `cotizaciones.cliente_id` / `cliente_direccion_id` **ya existen** (Sprint 12). `trabajo_fotos`, `consumos` y el poblado de `trabajos.evento_id` (agendar la OT) siguen pendientes (Etapa 2 / Sprints 13+). La app móvil de instaladores puebla las OT en terreno; las OT viejas pre-sistema las carga el dueño a mano.
 
@@ -412,7 +418,7 @@ Flujo de negocio, de principio a fin:
 - **`clientes`** (SoftDeletes — dato de seguimiento comercial) + **`cliente_direcciones`** (sin SoftDeletes; `cascadeOnDelete` de BD las limpia en `forceDelete` del cliente, no en el soft delete). Ver §5.
 - **`App\Livewire\Admin\Clientes\ClientesIndex`** (ruta `admin.clientes`, reemplaza el placeholder «Próximamente» del Sprint 8): una sola página maestro-detalle como el mockup — lista con buscador (`nombre`/`telefono`/`email`, `like`), y a la derecha el formulario del cliente seleccionado con sus direcciones agregables/quitables inline. `#[Url] $seleccionado` guarda el id en query string; un id inválido en la URL **no rompe la página** (se ignora en `mount`, no `findOrFail`). Guardado en `DB::transaction`: `updateOrCreate` por dirección + `whereNotIn` para borrar las quitadas. Eliminar cliente = soft delete.
 - **Alta manual únicamente.** El vínculo lead→cliente (matchear por teléfono, botón «convertir en cliente») se hace en el sprint de Cotizaciones.
-- **Fuera de alcance del Sprint 9:** historial de OT/instalaciones, alerta de mantención, «cotizaciones relacionadas» — todo depende de la OT (§11 ter). El Blade deja un comentario donde irán.
+- **Fuera de alcance del Sprint 9** (implementado luego en el Sprint 13, §11 octies): historial de OT, alerta de mantención, cotizaciones relacionadas.
 - **Tests:** `ClientesIndexTest` (7 casos) + `CrmNavegacionTest` actualizado. `php artisan test` **95 en verde**, `pint --test` verde.
 
 ### 11 quinquies. Sprint 10 — Calendario / agenda interna (implementado)
@@ -452,4 +458,17 @@ Flujo de negocio, de principio a fin:
 
 **Tests:** `CotizacionFormTest` (6), `CotizacionesIndexTest` (5, incluye idempotencia de la OT), `CotizacionPdfDataBuilderTest` reescrito, `CotizacionSoftDeleteTest` reescrito, `SolicitudContactoTest` reescrito (crea Cliente + notificación), `LandingPageTest` / `AdminAccessTest` / `CrmNavegacionTest` actualizados. `php artisan test` **96 en verde**, `pint --test` verde, `migrate:fresh --seed` OK.
 
-**Pendiente (Sprints 13+):** historial de OT + cotizaciones + alerta de mantención en la ficha de Cliente; agenda de OT en el Calendario vía `trabajos.evento_id`; sincronización con Google Calendar.
+**Pendiente (Sprints 14+):** sincronización con Google Calendar (§14); ver §11 octies para lo que cerró el Sprint 13.
+
+### 11 octies. Sprint 13 — Ficha de Cliente completa (implementado)
+
+- **`trabajos.cliente_direccion_id`** (FK nullable) — migración `add_cliente_direccion_id_to_trabajos_table`. `CotizacionEstadoService::crearOtSiFalta()` la copia de `cotizaciones.cliente_direccion_id` al crear la OT. Agrupa las OT por dirección en la ficha (mockup pág. 5). Una OT sin dirección cae en el grupo "Sin dirección asignada".
+- **`App\Livewire\Admin\Clientes\ClienteHistorial`** — componente hijo embebido en `ClientesIndex` (`<livewire:admin.clientes.cliente-historial :cliente-id="$seleccionado" :key="...">`), solo cuando hay cliente seleccionado. `ClientesIndex` sigue enfocado en editar cliente + direcciones; el historial vive aparte para no inflar el padre.
+  - **OT por dirección:** cada OT muestra estado, fecha de ejecución o de agenda, folio de la cotización, y el badge **"Mantención vencida"** (`Trabajo::mantencion_vencida` = `estado === 'ejecutada' && finalizado_at + meses_mantencion < hoy`). Editor inline: `estado` (`Trabajo::ESTADOS`), `finalizado_at` (fecha), `meses_mantencion`.
+  - **Cotizaciones relacionadas:** lectura, enlazan a `/admin/cotizaciones?seleccionada={id}`.
+- **`App\Services\TrabajoService`:**
+  - `cambiarEstado($ot, $estado, $fecha?)` — al pasar a `ejecutada` fija `finalizado_at` (fecha dada, o la que ya tenía, o hoy); al salir de `ejecutada` lo limpia.
+  - `agendar($ot, $fecha, $hora?, $notas?)` — crea o **reutiliza** el `Evento` de la OT (`trabajos.evento_id`), tipo `terreno`, con `ubicacion` = dirección de la OT y `cliente_id`. `hora` vacía → evento de todo el día. La OT apunta al evento, no al revés (§11 ter).
+  - `desagendar($ot)` — desliga y soft-borra el evento.
+- **Sin indicador de color** por cliente en la lista (decisión del dueño — se define después).
+- **Tests:** `TrabajoServiceTest` (7) + `ClienteHistorialTest` (6). `php artisan test` **109 en verde**, `pint --test` verde, `migrate:fresh --seed` OK.

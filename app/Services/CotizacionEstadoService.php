@@ -41,6 +41,7 @@ class CotizacionEstadoService
 
         Trabajo::create([
             'cliente_id' => $cotizacion->cliente_id,
+            'cliente_direccion_id' => $cotizacion->cliente_direccion_id,
             'cotizacion_id' => $cotizacion->id,
             'titulo' => "Instalación — {$nombreCliente} (cotización {$cotizacion->folio})",
             'descripcion' => $cotizacion->items->pluck('descripcion')->filter()->implode("\n"),
