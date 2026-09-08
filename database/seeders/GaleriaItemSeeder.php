@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\GaleriaItem;
-use App\Models\TipoEspacio;
 use Illuminate\Database\Seeder;
 
 class GaleriaItemSeeder extends Seeder
@@ -20,15 +19,14 @@ class GaleriaItemSeeder extends Seeder
         ];
 
         foreach ($items as $index => $item) {
-            $tipoEspacio = TipoEspacio::query()->where('slug', $item['slug'])->first();
-
-            GaleriaItem::create([
-                'foto_path' => "galeria/{$item['slug']}-1.svg",
-                'titulo' => $item['titulo'],
-                'tipo_espacio_id' => $tipoEspacio?->id,
-                'orden' => $index + 1,
-                'publicado' => true,
-            ]);
+            GaleriaItem::updateOrCreate(
+                ['foto_path' => "galeria/{$item['slug']}-1.svg"],
+                [
+                    'titulo' => $item['titulo'],
+                    'orden' => $index + 1,
+                    'publicado' => true,
+                ],
+            );
         }
     }
 }

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Evento extends Model
@@ -46,15 +47,11 @@ class Evento extends Model
         return $this->belongsTo(Cliente::class);
     }
 
-    /**
-     * Una OT (tabla `trabajos`) apunta a su evento vía `evento_id` — la relación
-     * inversa. `trabajos` aún no existe (sprint de Cotizaciones); este método se
-     * activa cuando se cree.
-     */
-    // public function trabajo(): HasOne
-    // {
-    //     return $this->hasOne(Trabajo::class);
-    // }
+    /** Una OT apunta a su evento vía `trabajos.evento_id` — relación inversa. */
+    public function trabajo(): HasOne
+    {
+        return $this->hasOne(Trabajo::class);
+    }
 
     public function scopeEntre(Builder $query, \DateTimeInterface $desde, \DateTimeInterface $hasta): Builder
     {

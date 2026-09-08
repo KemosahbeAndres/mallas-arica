@@ -2,28 +2,28 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\EnviarNotificacionesCotizacion;
-use App\Models\Cotizacion;
+use App\Jobs\NotificarNuevoCliente;
+use App\Models\Cliente;
 use Illuminate\Console\Command;
 
 class ReintentarNotificaciones extends Command
 {
     protected $signature = 'app:reintentar-notificaciones';
 
-    protected $description = 'Re-despacha el aviso por correo de las cotizaciones que quedaron sin notificar en las últimas 72 horas';
+    protected $description = 'Re-despacha el aviso por correo de los clientes del sitio que quedaron sin notificar en las últimas 72 horas';
 
     public function handle(): int
     {
-        $cotizaciones = Cotizacion::query()
+        $clientes = Cliente::query()
             ->whereNull('notificado_at')
             ->where('created_at', '>=', now()->subHours(72))
             ->get();
 
-        foreach ($cotizaciones as $cotizacion) {
-            EnviarNotificacionesCotizacion::dispatch($cotizacion);
+        foreach ($clientes as $cliente) {
+            NotificarNuevoCliente::dispatch($cliente);
         }
 
-        $this->info("Re-despachadas {$cotizaciones->count()} notificaciones pendientes.");
+        $this->info("Re-despachadas {$clientes->count()} notificaciones pendientes.");
 
         return self::SUCCESS;
     }

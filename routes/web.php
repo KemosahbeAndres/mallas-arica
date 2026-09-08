@@ -1,15 +1,14 @@
 <?php
 
+use App\Http\Controllers\CotizacionPdfController;
 use App\Livewire\Admin\Auth\Login;
 use App\Livewire\Admin\Calendario\CalendarioIndex;
 use App\Livewire\Admin\Clientes\ClientesIndex;
+use App\Livewire\Admin\Cotizaciones\CotizacionesIndex;
+use App\Livewire\Admin\Cotizaciones\CotizacionForm;
 use App\Livewire\Admin\Galeria\GaleriaIndex;
-use App\Livewire\Admin\Leads\LeadDetalle;
-use App\Livewire\Admin\Leads\LeadsIndex;
-use App\Livewire\Admin\Proximamente;
 use App\Livewire\Admin\Resumen\ResumenIndex;
 use App\Livewire\Admin\SitioWeb\SitioWebPanel;
-use App\Livewire\Admin\Tarifas\TarifasMatriz;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -24,20 +23,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Dashboard «Resumen» (Sprint 11): KPIs + agenda de la semana + últimas cotizaciones.
         Route::get('/resumen', ResumenIndex::class)->name('resumen');
 
-        // CRM «Sitio web» (Sprint 8): contenido, imágenes y FAQ editables.
-        Route::get('/sitio-web', SitioWebPanel::class)->name('sitio-web');
+        // CRM «Cotizaciones» (Sprint 12): cotizaciones internas con ítems libres,
+        // estados borrador→generada→aceptada→rechazada, PDF y creación de OT al aceptar.
+        Route::get('/cotizaciones', CotizacionesIndex::class)->name('cotizaciones');
+        Route::get('/cotizaciones/nueva', CotizacionForm::class)->name('cotizaciones.nueva');
+        Route::get('/cotizaciones/{cotizacion}/editar', CotizacionForm::class)->name('cotizaciones.editar');
+        Route::get('/cotizaciones/{cotizacion}/pdf', [CotizacionPdfController::class, 'descargar'])
+            ->name('cotizaciones.pdf');
 
-        // Secciones del chrome del CRM aún no construidas → Proximamente.
-        Route::get('/cotizaciones', Proximamente::class)->name('cotizaciones')
-            ->defaults('seccion', 'Cotizaciones')
-            ->defaults('detalle', 'El rediseño de cotizaciones con folio y estados es la última pieza del CRM. Por ahora los leads se ven en la sección Tarifas → Leads del panel anterior.');
         Route::get('/clientes', ClientesIndex::class)->name('clientes');
         Route::get('/calendario', CalendarioIndex::class)->name('calendario');
 
-        // Rutas del panel del Sprint 5 — siguen vivas (enlaces guardados, tests).
-        Route::get('/tarifas', TarifasMatriz::class)->name('tarifas');
-        Route::get('/leads', LeadsIndex::class)->name('leads.index');
-        Route::get('/leads/{cotizacion}', LeadDetalle::class)->name('leads.show');
+        // CRM «Sitio web» (Sprint 8): contenido, imágenes y FAQ editables.
+        Route::get('/sitio-web', SitioWebPanel::class)->name('sitio-web');
         Route::get('/galeria', GaleriaIndex::class)->name('galeria');
 
         Route::post('/logout', function () {

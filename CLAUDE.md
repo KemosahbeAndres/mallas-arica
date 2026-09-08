@@ -71,20 +71,36 @@ App móvil (Etapa 2) ──► /api/v1/* (Sanctum) ──► mismos Services
 
 ---
 
-## 4. Etapa 1 — Landing + Cotizador (MVP)
+## 4. Etapa 1 — Landing + captación de contacto (MVP)
 
-### 4.1 Secciones (orden del mockup)
+> **Sprint 12 — el cotizador con cálculo automático se ELIMINÓ.** Ver §11 septies y la
+> memoria `cotizador-oculto-formulario-contacto`. El negocio cotiza **siempre a mano**
+> tras la visita técnica. Lo que sigue en §4.2–4.7 describe el flujo antiguo y se
+> conserva solo como registro histórico — **no aplica**. El flujo vigente:
+>
+> - El formulario de la landing (`<livewire:solicitud-contacto />`) **crea un `Cliente`**
+>   (match por teléfono) + su dirección, y dispara el aviso al dueño (`NotificarNuevoCliente`
+>   → `NuevoClienteAdmin`). No calcula precio, no crea cotización.
+> - Las cotizaciones se arman en el panel (`/admin/cotizaciones`) con ítems de línea libres.
+>   Estados `borrador → generada → aceptada → rechazada`. Al aceptar → se crea la **OT**
+>   (`trabajos`).
+> - Borrado en cascada del motor: `CotizadorWizard`/`PanelPrecio`/`ItemEspacio`,
+>   `CotizacionCalculatorService`, `TarifaCacheService`, CRUD admin de Tarifas, DTOs de
+>   cálculo, y las tablas `tarifas` / `tramos_altura` / `tipos_espacio` / `tipos_malla`
+>   (más `visitas`, que nunca tuvo UI). `config/cache.php` ya no tiene `tarifas_store`.
+
+### 4.1 Secciones de la landing (orden del mockup)
 1. **Navbar** — Servicios · Cotizador · Galería · FAQ · [Escríbenos] (rojo)
-2. **Hero** — badge `🛡 Mallas de seguridad certificadas · Arica`, H1 con "tranquilidad" en rojo, 2 CTA (`Cotizar 30 segundos` / `Agendar visita`), 3 checks de confianza
+2. **Hero** — badge `🛡 Mallas de seguridad certificadas · Arica`, H1 con "tranquilidad" en rojo, 2 CTA, 3 checks de confianza
 3. **Barra de atributos** — Transparente · 200 kg/m² · Filtro UV · Rápida
-4. **Qué protegemos** — grid 3×2 de los 6 tipos
-5. **Tipos de malla** (implementado, Sprint 7) — 3 espesores con precios/specs de referencia + 2 sistemas de instalación
+4. **Qué protegemos** — grid 3×2 de los 6 tipos (contenido estático hardcodeado en `protection-grid.blade.php` desde el Sprint 12; antes leía `tipos_espacio`)
+5. **Tipos de malla** (Sprint 7) — 3 espesores con precios/specs de referencia + 2 sistemas de instalación
 6. **Cómo trabajamos** — 4 pasos numerados
-7. **Cotizador** — split: formulario (izq, crema) + panel de precio (der, `--ink`, sticky)
+7. **Formulario de contacto** (`<livewire:solicitud-contacto />`, ancla `#cotizador`) — nombre/teléfono/dirección obligatorios + email opcional → crea un `Cliente`
 8. **Galería** — grid mosaico + "Ver más en WhatsApp →"
 9. **Nosotros** — texto + dirección Av. Diego Portales #1333 + teléfono + medios de pago
-10. **FAQ** — acordeón, 7 preguntas (incluye medios de pago)
-11. **CTA final + Footer** — `--ink`, incluye íconos de redes sociales (Facebook/Instagram, Sprint 7)
+10. **FAQ** — acordeón, 7 preguntas (editable en BD, Sprint 8)
+11. **CTA final + Footer** — `--ink`, íconos de redes sociales (Sprint 7)
 
 > **Corrección de contenido (post-Sprint 3):** la **visita técnica** (medir y cotizar) y la **instalación** son dos citas distintas, agendadas por separado — nunca "el mismo día" el uno del otro.
 >
@@ -98,82 +114,29 @@ App móvil (Etapa 2) ──► /api/v1/* (Sanctum) ──► mismos Services
 >
 > **Redes sociales (implementado, Sprint 7):** footer con íconos de Facebook (`facebook.com/mallas.arica`) e Instagram (`instagram.com/mallas_arica_jacob`), SVG inline (sin librería de íconos externa).
 
-### 4.2 Modelo de cálculo (el cambio crítico)
+### 4.2–4.6 (histórico — flujo del cotizador automático, ELIMINADO en el Sprint 12)
 
-```
-subtotal_item = max(metros_lineales, METRAJE_MINIMO)
-                × precio_ml(tipo_espacio, tramo_altura, tipo_malla)
+El modelo de cálculo por metro lineal × tramo de altura × multiplicador de malla, los
+8 edge cases, `CotizadorWizard`/`PanelPrecio`, el snapshot de tarifas y los dos botones
+de conversión (WhatsApp / PDF) **ya no existen**. Se conservan en el historial de git.
+Si el negocio alguna vez quiere volver a un cotizador instantáneo, es un rediseño nuevo,
+no una reactivación. Ver §11 septies para el flujo vigente.
 
-total_min = Σ subtotal_item(precio_ml_min)
-total_max = Σ subtotal_item(precio_ml_max)
-```
+### 4.7 Diseño del PDF de cotización (Sprint 12 — ítems libres)
 
-- El **tramo de altura** es un *lookup* discreto (`hasta 1,5 m` / `1,5–2 m` / `2–3 m` / `+3 m`), **no** un multiplicador continuo. Refleja cómo se corta la malla en rollos.
-- `tipo_malla` aplica un **multiplicador** sobre el precio del tramo (Estándar `1.0`, Mascotas `~1.35`).
-- Redondeo final **hacia arriba al millar** en CLP. Enteros, sin decimales, en toda la BD.
+Fuente de verdad de estilo: `./diseño/cotizacion-v2.pdf`. Generación:
+`App\Services\CotizacionPdfDataBuilder` + `resources/views/pdf/cotizacion.blade.php`
+vía `barryvdh/laravel-dompdf`. Descarga en `GET /admin/cotizaciones/{cotizacion}/pdf`
+(`CotizacionPdfController`).
 
-### 4.3 Edge cases obligatorios
-
-| Caso | Comportamiento |
-|---|---|
-| `metros_lineales < METRAJE_MINIMO` (2 ml) | Se cobra el mínimo. Mostrar nota: *"Cobro mínimo de 2 m lineales"* |
-| Altura `+3 m` | **No mostrar precio.** Reemplazar panel por *"Requiere evaluación en terreno"* + CTA WhatsApp |
-| `metros_lineales > 40` | Mismo tratamiento: derivar a contacto, no calcular |
-| Tipo = Piscina | Sin precio automático en v1 (geometría irregular). Solo lead |
-| Sin tarifa vigente para la combinación | Fallback a lead, **nunca** a `$0` ni excepción visible |
-| Input no numérico / negativo | Validación reactiva, panel congela el último valor válido |
-| Cambio de precios en admin | **Snapshot** de `precio_ml_min/max` en cada `cotizacion_item` al momento de crear |
-| IVA | Definir una vez y declararlo en el panel: `Valores incluyen IVA` |
-
-### 4.4 Componentes Livewire
-
-```
-app/Livewire/
-├── Cotizador/
-│   ├── CotizadorWizard.php      # estado, ítems (array), wire:model.live.debounce.400ms
-│   └── PanelPrecio.php          # hijo #[Reactive], rango, desglose, CTA WhatsApp (sticky)
-└── GaleriaMosaico.php           # + lightbox Alpine — pendiente, Sprint 4
-```
-
-> **Decisión de implementación (Sprint 3):** la fila de ítem (`ItemEspacio`) se implementa como **Blade component puro** (`resources/views/components/cotizador/item-espacio.blade.php`), no como componente Livewire independiente. Un Livewire real por fila obligaría a sincronizar estado entre componentes hijos y el wizard padre solo para un array editable — complejidad innecesaria en Livewire 3. El Blade component recibe el item y su índice como props y usa `wire:model` apuntando a `items.{index}.campo` directo en el estado del `CotizadorWizard`.
-
-> **Decisión de implementación (Sprint 3, cierre):** `LeadForm` tampoco se implementó como componente Livewire separado — honeypot y throttle viven dentro de `CotizadorWizard::persistirCotizacion()`, junto a la validación de `nombre`/`telefono`/`email` que ya usan ambos botones de conversión. El throttle es un `RateLimiter` de Laravel por IP (`cotizador:{ip}`, 5 intentos / 10 minutos); al superarlo, `persistirCotizacion()` devuelve `null` y agrega el error de validación `throttle`, mostrado en el formulario junto al honeypot.
-
-- El acordeón de FAQ y el menú móvil son **Alpine puro**, sin roundtrip a servidor.
-- **Tarifas vigentes cacheadas en Redis (implementado, Sprint 5):** `App\Services\TarifaCacheService` cachea la colección completa de tarifas vigentes (agrupada por `tipo_espacio_id:tramo_altura_id`) bajo la key `tarifas:v{n}`, con `REDIS_PREFIX=appmallas:` en prod la key real queda `appmallas:tarifas:v{n}` tal como se documentó originalmente aquí. Store de caché configurable vía `config('cache.tarifas_store')` (`CACHE_TARIFAS_STORE`, default `redis`) — separado del `CACHE_STORE` global porque desarrollo usa `database` para el default y las tarifas deben ir a Redis según esta sección. **Invalidación por versión incremental** (`Cache::increment('tarifas:version')`), no `Cache::forget`: evita servir datos viejos por una condición de carrera donde un `remember()` en vuelo que ya leyó de BD reescribiría la key justo después de un forget. La invalidación vive en `App\Observers\TarifaObserver` (`saved`, `deleted`), registrado en `AppServiceProvider::boot()` — cubre también cambios por tinker/comandos, no solo el admin. `CotizacionCalculatorService` consume `TarifaCacheService::buscar()` en vez de tocar la tabla `tarifas` directo → el cotizador **no toca la BD por tecla**.
-
-### 4.5 Datos del cliente y persistencia del lead
-
-> **Decisión (Sprint 3, ampliación post-cierre inicial):** el cotizador pide **condominio/dirección** (texto libre, opcional) en vez de `comuna`, y agrega **correo electrónico** (opcional). Objetivo: dejar registro completo del cliente y su cotización para hacer seguimiento comercial, no solo capturar el lead mínimo para WhatsApp.
-
-- Campos del formulario de contacto: `nombre` (requerido), `telefono` (requerido), `direccion` (opcional, reemplaza a `comuna`), `email` (opcional).
-- La cotización se persiste **siempre** al confirmar (estado `borrador`), independientemente de qué botón de conversión use el cliente después.
-- **Cambio de esquema:** en `cotizaciones`, la columna `comuna` se reemplaza por `direccion` (string nullable). `email` ya existía en el esquema base (§5) como nullable — se activa su captura en el formulario.
-
-### 4.6 Conversión: dos caminos, no uno
-
-Tras calcular la cotización, el cliente tiene **dos botones de conversión** (ya no solo WhatsApp):
-
-1. **`Crear por WhatsApp`**: persiste la cotización y abre `wa.me` con mensaje prellenado que incluye el **N° correlativo** de la cotización (`Cotizacion::numero`, ver §4.7). **El lead se guarda aunque el usuario nunca envíe el mensaje.**
-2. **`Descargar PDF`** (implementado, Sprint 3): persiste la cotización (comparte `persistirCotizacion()` con el flujo de WhatsApp en `CotizadorWizard` — sin duplicar lógica) y genera un PDF vía `barryvdh/laravel-dompdf` (`resources/views/pdf/cotizacion.blade.php`) con diseño de marca (ver §4.7).
-   - Ambos botones (`crearCotizacionYAbrirWhatsapp`, `crearCotizacionYDescargarPdf`) llaman a `persistirCotizacion()`, que valida `nombre`/`telefono`/`email` y aplica el honeypot antes de crear el registro.
-
-### 4.7 Diseño del PDF de cotización (implementado)
-
-Fuente de verdad: `./diseño/cotizacion-v2.pdf`. Layout tipo factura/comprobante:
-
-- **Header:** isologo + wordmark "Mallas Arica Jacob" (subtítulo "Instalación de mallas de protección · Arica") a la izquierda; badge rojo `COTIZACIÓN` a la derecha, con **N°** correlativo de 4 dígitos y **Fecha** debajo.
-- **Bloques EMPRESA / CLIENTE** lado a lado, fondo `--cream-deep`, etiqueta roja en mayúsculas (`EMPRESA`, `CLIENTE`):
-  - EMPRESA: razón social fija ("Mallas Arica Jacob"), RUT fijo, dirección fija (Av. Diego Portales #1333, Arica), teléfono y correo fijos de la empresa — **hardcodeado en la plantilla**, no viene de BD.
-  - CLIENTE: `nombre`, `direccion` (condominio/dirección del cliente), `telefono`, `email` de la cotización.
-- **Tabla de ítems** con header `--ink` (fondo negro, texto blanco): columnas `Descripción` | `P. unitario` | `Cant.` | `Subtotal`.
-  - **Decisión:** `P. unitario` = `precio_ml_max_snapshot × multiplicador_snapshot` del ítem (el techo del rango, no el mínimo) — el PDF es un documento formal que el cliente puede mostrar a terceros; comprometerse al mínimo arriesga tener que cobrar más tras la visita técnica sin respaldo escrito. `Cant.` = `metros_lineales`. `Subtotal` = `precio_unitario × cantidad` (recalculado en la vista, no usa `subtotal_max` directo, para que la aritmética de la línea cierre visualmente).
-  - `Descripción` compone: nombre del tipo de espacio + tipo de malla (si no es la estándar) + tramo de altura, ej. *"Malla de protección estándar — instalación en Ventana, hasta 1,5 m"*.
-  - Si `requiere_visita` es true para el ítem (altura +3m, >40ml, piscina), la línea muestra `Subtotal: A confirmar en visita técnica` en vez de un monto, y no entra en la suma de Neto.
-- **Totales:** `Neto` (suma subtotales, sin IVA) → `IVA (19%)` → `Total` en barra roja `--brand-red-ui` con texto blanco. El sitio ya declara "valores incluyen IVA" en el cotizador web (rango min-max); el PDF **desglosa** el IVA explícitamente porque el precio unitario ahí es fijo, no rango.
-- **Nota de vigencia:** franja con ícono de reloj, borde izquierdo rojo, fondo `--cream-deep`: *"Esta cotización tiene una vigencia de 10 días a contar de la fecha de emisión. Los valores están expresados en pesos chilenos (CLP) e incluyen IVA según se detalla."*
-- **Footer:** teléfono + correo de la empresa, centrado, gris.
-- **N° correlativo:** único identificador público de la cotización — se deriva del `id` autoincremental de `cotizaciones` formateado a 4 dígitos (accessor `Cotizacion::numero`, no es una secuencia separada). Se usa en el PDF, en el mensaje de WhatsApp y en la pantalla de confirmación del cotizador. **El antiguo código alfanumérico `MA-XXXX` fue eliminado** (columna `codigo` dropeada, ver migración `drop_codigo_from_cotizaciones_table`) — no reintroducirlo.
+- **Header:** isologo + wordmark; badge rojo `COTIZACIÓN` con el **folio** de 4 dígitos y la fecha (en español vía `App\Support\FechaEsp`).
+- **Bloques EMPRESA / CLIENTE** lado a lado, fondo `--cream-deep`:
+  - EMPRESA: razón social, RUT, dirección, teléfono y correo — **hardcodeado** en `CotizacionPdfDataBuilder::EMPRESA` (mismo criterio que el JSON-LD, §4.9).
+  - CLIENTE: nombre / dirección / contacto tomados del `Cliente` y la `ClienteDireccion` de la cotización, con fallback a los campos-copia de `cotizaciones` (`nombre`/`telefono`/`email`/`direccion`).
+- **Tabla de ítems** — columnas `Descripción` | `P. unitario` | `Cant.` | `Desc.` | `Subtotal`. Las líneas son **libres** (`cotizacion_items.descripcion`, `precio_unitario`, `cantidad`, `descuento_pct`, `subtotal`). `subtotal` de línea = `precio_unitario × cantidad × (1 − descuento_pct/100)`, redondeado, calculado por `CotizacionItem::calcularSubtotal()`.
+- **Totales:** (si hay descuento global, una fila lo señala) `Neto` → `IVA (19%)` → `Total` en barra roja. `Cotizacion::neto` = suma de subtotales de línea × `(1 − descuento_pct/100)`; `iva` y `total` son accessors (`Cotizacion::IVA_TASA = 0.19`).
+- **Nota de vigencia:** editable en BD (`site_contents` key `cotizaciones.mensaje_vigencia`, Sprint 8), con `CotizacionPdfDataBuilder::MENSAJE_VIGENCIA_DEFAULT` de fallback.
+- **Folio:** `Cotizacion::folio` — accessor sobre `id` a 4 dígitos. **Antes se llamaba `numero`** (renombrado en el Sprint 12). El `codigo` alfanumérico `MA-XXXX` sigue eliminado.
 
 ### 4.8 Galería (implementado, Sprint 4)
 
@@ -198,63 +161,52 @@ No se tuvo acceso al listado real de URLs de producción del sitio Wix anterior 
 
 - **Auth propia, sin Breeze/Filament:** `App\Livewire\Admin\Auth\Login` (componente de clase, `Auth::attempt()` nativo) sobre el guard `web` estándar. Se descartó Breeze porque su instalador (`php artisan breeze:install livewire`) pisa el pipeline Tailwind 4 CSS-first del proyecto (reemplaza `resources/css/app.css`/`vite.config.js` por Tailwind 3 clásico + `tailwind.config.js`), y usa Livewire Volt en vez de componentes de clase, inconsistente con el resto del proyecto. Mismo patrón de throttle que `CotizadorWizard::persistirCotizacion()` (`RateLimiter` por IP, clave `admin-login:{ip}`, 5 intentos/10 min), con `RateLimiter::clear()` en éxito. **Sin registro público en ningún momento** — `bootstrap/app.php` declara `redirectGuestsTo(fn () => route('admin.login'))`.
 - **Alta del admin:** único punto de verdad en `App\Support\AdminUserManager::crear()`, usado por `database/seeders/AdminUserSeeder` (lee `ADMIN_EMAIL`/`ADMIN_PASSWORD`/`ADMIN_NAME` del `.env`) y por `php artisan app:crear-admin` (interactivo por defecto, o `--from-env`/`--email`/`--password` para uso no interactivo en deploy).
-- **Rutas** bajo `/admin/*` (`routes/web.php`): `/admin/login` (guest), `/admin/tarifas`, `/admin/leads`, `/admin/leads/{cotizacion}`, `/admin/galeria` (auth). Layout propio `resources/views/components/layouts/admin.blade.php` — independiente del layout público (ese trae navbar/footer/SEO de marketing), reusa el mismo `@vite`/tokens de marca, con sidebar (`x-admin.sidebar`) solo cuando hay sesión.
-- **CRUD Tarifas** (`App\Livewire\Admin\Tarifas\TarifasMatriz`): matriz única tipo_espacio × tramo_altura con inputs inline de precio min/max y botón guardar por celda. El MVP **solo edita la tarifa vigente actual** (sin UI de historial de vigencias): cada guardado hace `Tarifa::updateOrCreate(..., ['vigente_desde' => hoy], ...)`, respetando el UNIQUE existente — si la tarifa vigente era de una fecha anterior, esto crea una fila nueva con `vigente_desde` de hoy sin cerrar `vigente_hasta` de la anterior (la lectura por `orderByDesc('vigente_desde')` siempre toma la más reciente, así que no hay bug de lectura, solo acumulación histórica sin curar — aceptable para este MVP).
-- **CRUD Leads** (`App\Livewire\Admin\Leads\LeadsIndex` + `LeadDetalle`): listado paginado con filtro por `estado` (`Cotizacion::ESTADOS`, constante nueva que centraliza los 5 valores — antes solo vivían en el enum de la migración), vista de detalle con los items de la cotización y cambio de estado vía `<select>`. **Sin editar los datos del cliente ni eliminar leads** en este sprint (soft delete existente se reserva para mantenimiento, no expuesto en esta UI).
-- **CRUD Galería** (`App\Livewire\Admin\Galeria\GaleriaIndex` + `GaleriaForm`): alta/edición con `WithFileUploads` (mismo patrón que se reutilizará en Etapa 2 para `trabajo_fotos` — `$foto->store('galeria', 'public')`), toggle publicado, reordenar con botones ↑/↓ (swap del campo `orden` en `DB::transaction()`, sin drag-and-drop — no hay librería JS para eso instalada), y **hard delete real** (fila + archivo en disco) porque `galeria_items` no tiene SoftDeletes (ver §5).
+- **Alta del admin:** `App\Support\AdminUserManager::crear()`, usado por `AdminUserSeeder` (lee `ADMIN_*` del `.env`) y por `php artisan app:crear-admin`.
+- **Rutas y chrome actuales (post Sprints 8–12):** navbar horizontal (`x-admin.navbar`, `diseño/dashboard-v1.pdf`) con **Resumen · Cotizaciones · Clientes · Calendario · Sitio web**. `/admin` redirige a `/admin/resumen`. Ya **no existen** `/admin/tarifas` ni `/admin/leads` (Sprint 12). `/admin/galeria` sigue viva pero se accede desde el sub-tab "Imágenes" de Sitio web. `x-admin.sidebar` fue eliminado en el Sprint 8.
+- **CRUD Galería** (`App\Livewire\Admin\Galeria\GaleriaIndex` + `GaleriaForm`): alta/edición con `WithFileUploads` (`$foto->store('galeria', 'public')`), toggle publicado, reordenar con botones ↑/↓ (`DB::transaction()`), **hard delete real** (fila + archivo) porque `galeria_items` no tiene SoftDeletes. Ya no tiene el campo `tipo_espacio_id` (Sprint 12).
+- Las demás secciones del panel están documentadas en §11 quater (Clientes), §11 quinquies (Calendario), §11 sexies (Resumen) y §11 septies (Cotizaciones).
 
 ---
 
 ## 5. Esquema de base de datos
 
+> **Sprint 12 eliminó** `tipos_espacio`, `tipos_malla`, `tramos_altura`, `tarifas` y `visitas`
+> (junto con el motor de cálculo). Sus modelos, seeders y el CRUD de Tarifas ya no existen.
+
 ```php
-// Catálogos (seeders, editables desde admin)
-tipos_espacio:   id, slug, nombre, descripcion, icono, permite_calculo(bool), orden, activo
-tipos_malla:     id, slug, nombre, grosor_mm, rombo_cm, multiplicador(decimal 4,2), activo
-tramos_altura:   id, etiqueta, altura_min(decimal), altura_max(nullable), requiere_visita(bool)
+// Transaccional — cotizaciones, cotizacion_items usan SoftDeletes (ver nota abajo)
+cotizaciones:    id, cliente_id(null → clientes), cliente_direccion_id(null → cliente_direcciones),
+                 nombre(null), telefono(null), email(null), direccion(null),
+                 estado(enum: borrador|generada|aceptada|rechazada),
+                 descuento_pct(decimal 5,2), total_min(int), total_max(int),
+                 notificado_at(null), deleted_at, timestamps
+                 // nombre/telefono/email/direccion son una COPIA de conveniencia
+                 // (fallback del PDF cuando no hay cliente). El contacto real vive
+                 // en `clientes`. Folio = accessor Cotizacion::folio sobre `id`
+                 // (antes `numero`). total_min/total_max se conservan pero con
+                 // ítems libres no hay rango: ambos = neto.
 
-tarifas:         id, tipo_espacio_id, tramo_altura_id, precio_ml_min(int), precio_ml_max(int),
-                 vigente_desde(date), vigente_hasta(nullable)
-                 UNIQUE(tipo_espacio_id, tramo_altura_id, vigente_desde)
-                 // El admin de tarifas (Sprint 5, §4.11) escribe filas nuevas con
-                 // vigente_desde = hoy en cada guardado, en vez de mutar vigente_hasta
-                 // de la fila anterior — la lectura (TarifaCacheService) siempre toma
-                 // la de vigente_desde más reciente por combinación, así que no hay
-                 // bug de lectura, solo historial sin curar (aceptable para el MVP).
+cotizacion_items: id, cotizacion_id, descripcion, precio_unitario(int),
+                  cantidad(decimal 8,2), descuento_pct(decimal 5,2), subtotal(int),
+                  deleted_at, timestamps
+                  // Líneas LIBRES (Sprint 12). subtotal = precio_unitario × cantidad
+                  // × (1 − descuento_pct/100), redondeado. Cotizacion::neto aplica
+                  // además el descuento_pct global de la cotización.
 
-// Transaccional — cotizaciones, cotizacion_items y visitas usan SoftDeletes (ver nota abajo)
-cotizaciones:    id, uuid, nombre, telefono, email(null), direccion(null),
-                 canal(enum: web|whatsapp|telefono), estado(enum: borrador|contactado|
-                 agendado|cerrado|perdido), total_min(int), total_max(int),
-                 requiere_visita(bool), utm_source, ip_hash, deleted_at, timestamps
-                 // direccion reemplaza a comuna (v2.1, implementado): texto libre
-                 // "condominio/dirección", opcional. Ver migración rename_comuna_to_direccion.
-                 // columna `codigo` (MA-XXXX) eliminada (v2.2): el identificador público
-                 // es el N° correlativo derivado de `id` (accessor Cotizacion::numero, §4.7).
-                 // Ver migración drop_codigo_from_cotizaciones_table.
-
-cotizacion_items: id, cotizacion_id, tipo_espacio_id, tipo_malla_id, tramo_altura_id,
-                  metros_lineales(decimal 6,2),
-                  precio_ml_min_snapshot(int), precio_ml_max_snapshot(int),
-                  multiplicador_snapshot(decimal 4,2),
-                  subtotal_min(int), subtotal_max(int), deleted_at
-
-visitas:         id, cotizacion_id, equipo_id(null), fecha_agendada, ventana_horaria,
-                 direccion, estado, notas, deleted_at
-
-// Etapas 2–3 — «OT» (Orden de Trabajo). Ver convención de dominio abajo.
-// El modelado definitivo de `trabajos` (doble FK cliente_id + cotizacion_id,
-// meses_mantencion, medidas, firma) se cierra en el sprint de Cotizaciones,
-// no está congelado aquí.
-trabajos:        id, cotizacion_id, cliente_id, equipo_id, medidas_finales(json),
-                 total_final(int), firma_path, estado, finalizado_at
-trabajo_fotos:   id, trabajo_id, tipo(enum: anclaje|tension|panoramica), foto_path,
-                 tomada_at, lat, lng, aprobada(bool), revisada_por
-consumos:        id, trabajo_id, malla_ml, cable_acero_ml, fijaciones(int), costo_total(int)
+// «OT» (Orden de Trabajo) — §11 ter. Se crea al aceptar una cotización
+// (CotizacionEstadoService). Versión mínima: sin medidas/firma/fotos/consumos
+// (eso es Etapa 2, app móvil de instaladores).
+trabajos:        id, cliente_id(null), cotizacion_id(null), evento_id(null → eventos),
+                 titulo, descripcion(null),
+                 estado(pendiente|en_curso|ejecutada|cancelada),
+                 meses_mantencion(smallint, default 12), finalizado_at(null),
+                 timestamps, deleted_at
+// trabajo_fotos / consumos: Etapa 2, no creados todavía.
 
 // Implementado Sprint 4 — foto_path es la ruta relativa en el disco `public`
 // (storage/app/public), no una key de R2 (ver §1 y §3: R2 descartado).
-galeria_items:   id, foto_path, titulo, tipo_espacio_id(nullable), orden, publicado(bool)
+galeria_items:   id, foto_path, titulo, orden, publicado(bool)
+                 // tipo_espacio_id eliminado en el Sprint 12.
 
 // Implementado Sprint 8 — contenido editable de la landing en BD (§11 bis).
 // Sin SoftDeletes (no son datos de cliente). site_contents.key con notación
@@ -265,10 +217,10 @@ faqs:            id, pregunta, respuesta, orden, publicada(bool), timestamps
 
 // Implementado Sprint 9 — entidad Clientes (§11 ter). clientes con SoftDeletes
 // (dato de negocio); cliente_direcciones sin SoftDeletes (cascada de BD al
-// forceDelete). El vínculo cotizaciones.cliente_id se agrega en el sprint de
-// Cotizaciones, no ahora.
+// forceDelete). notificado_at (Sprint 12): fecha del aviso al dueño para los
+// clientes que entran por el formulario del sitio.
 clientes:            id, nombre, telefono(null), email(null), notas(null),
-                     timestamps, deleted_at
+                     notificado_at(null), timestamps, deleted_at
 cliente_direcciones: id, cliente_id, direccion, etiqueta(null), timestamps
 
 // Implementado Sprint 10 — agenda interna (§11 quinquies). Unidad de agenda
@@ -283,11 +235,9 @@ eventos:         id, titulo, descripcion(null), tipo(terreno|oficina),
                  timestamps, deleted_at
 ```
 
-**Índices:** `cotizaciones(estado, created_at)`, `trabajo_fotos(trabajo_id, tipo)`.
+**Índices:** `cotizaciones(estado, created_at)`, `eventos(inicio, estado)`, `trabajos(estado, finalizado_at)`.
 
-> **Política de borrado (v2.2, implementado):** las tablas transaccionales — `cotizaciones`, `cotizacion_items`, `visitas` — usan `SoftDeletes` de Laravel (`deleted_at`). **Ningún registro de cliente se elimina físicamente**: son datos de seguimiento comercial y potencial evidencia de negocio, nunca deben desaparecer del todo. El modelo `Cotizacion` replica la cascada a mano en `booted()` (`static::deleting`) porque el `cascadeOnDelete()` de la FK no se dispara con soft deletes — al borrar una cotización, sus `items` y su `visita` también quedan soft-deleted.
->
-> Los catálogos (`tipos_espacio`, `tipos_malla`, `tramos_altura`, `tarifas`) **no** llevan `SoftDeletes`: ya tienen su propio mecanismo de desactivación (`activo`, `vigente_hasta`) y duplicar el concepto sería redundante. Cuando se implemente el panel admin (Sprint 5), cualquier acción de "eliminar" sobre cotizaciones/visitas debe ser un soft delete (`->delete()` normal); reservar `forceDelete()` solo para tareas de mantenimiento explícitas fuera del flujo normal de negocio, nunca expuesto en la UI del cliente.
+> **Política de borrado:** `cotizaciones`, `cotizacion_items`, `clientes`, `eventos`, `trabajos` usan `SoftDeletes`. **Ningún registro de cliente/negocio se elimina físicamente.** `Cotizacion::booted()` replica la cascada a mano (`static::deleting`) porque `cascadeOnDelete()` de la FK no dispara con soft deletes — al borrar una cotización, sus `items` quedan soft-deleted. `cliente_direcciones` **no** lleva SoftDeletes (la cascada de BD las limpia solo en `forceDelete()` del cliente). Reservar `forceDelete()` para mantenimiento, nunca en la UI.
 
 ---
 
@@ -297,12 +247,12 @@ eventos:         id, titulo, descripcion(null), tipo(terreno|oficina),
 |---|---|---|
 | `POST` | `/api/v1/auth/token` | Login instalador (Sanctum) |
 | `GET` | `/api/v1/trabajos/asignados` | Agenda del día del equipo |
-| `POST` | `/api/v1/trabajos/{id}/medidas` | Medidas reales → **recalcula con el mismo Service** → devuelve total final |
+| `POST` | `/api/v1/trabajos/{id}/medidas` | Medidas reales de la instalación (sin recálculo automático de precio — el motor se eliminó en el Sprint 12; el ajuste de precio, si lo hay, lo hace el dueño a mano en la cotización) |
 | `POST` | `/api/v1/trabajos/{id}/firma` | Firma digital del cliente |
 | `POST` | `/api/v1/trabajos/{id}/fotos` | Sube el archivo directo al VPS (filesystem local, ver §1 y §3) |
 | `POST` | `/api/v1/trabajos/{id}/finalizar` | Bloqueado hasta tener las 3 fotos obligatorias |
 
-**Nota:** el recálculo en terreno usa metros lineales reales + altura medida, sobre las **tarifas del snapshot de la cotización**, no las vigentes. Evita que el cliente vea un precio distinto al que le mostraron.
+**Nota (post-Sprint 12):** no hay recálculo automático de precio en terreno. La cotización se hizo a mano; si tras medir cambia el alcance, el dueño edita la cotización en el panel.
 
 ---
 
@@ -367,19 +317,18 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 3 | ✅ `CotizadorWizard` + `PanelPrecio` + persistencia de lead + handoff WhatsApp + descarga PDF + honeypot/throttle | Lead guardado aunque no se envíe el WhatsApp — **cerrado** |
 | 4 | ✅ Galería (filesystem local) + FAQ + SEO/schema + 301 | Sitemap indexable — **cerrado** |
 | 5 | ✅ Panel admin: tarifas, leads, galería (Etapa 3 parcial) — ver §4.11 | El papá cambia un precio sin tocar código — **cerrado**, verificado con `php artisan test` (70 tests) |
-| 5c | ✅ Correo transaccional (Resend + Cloudflare Email Routing) — ver `plan-correo.md` | Código listo y testeado (`php artisan test`, Pint verde); **pendiente la configuración externa** (Cloudflare Email Routing, dominio verificado en Resend, secrets en el VPS) antes de verificar el circuito completo (§6 de `plan-correo.md`) — **cerrado del lado del repositorio** |
+| 5c | ✅ Correo transaccional (Resend + Cloudflare Email Routing) — ver `plan-correo.md`. **Post-Sprint 12** el aviso es "nuevo cliente desde el sitio" (`NotificarNuevoCliente` → `NuevoClienteAdmin`), ya no "nueva cotización"; la infraestructura de correo (Resend, mailer, config) es la misma | Código listo y testeado; **pendiente la configuración externa** (Cloudflare Email Routing, dominio en Resend, secrets en el VPS) — **cerrado del lado del repositorio** |
 | 6 | ✅ Deploy prod | Sitio en producción en `mallasarica.cl`, DNS propagado — **cerrado** |
 | 7 | ✅ Ajustes de contenido/negocio en la landing pedidos por el dueño (sección "Tipos de Malla" con 3 espesores + precios de referencia, sistemas de instalación Netzen/aluminio, redes sociales en footer, imagen del hero) — ver §4.1 | Sección Tipos de Malla + redes sociales + placeholder de marca del hero **implementados**, `pint --test` y `php artisan test` (70) verdes — **cerrado**. La foto real del Morro de Arica (insumo del dueño) es un swap de archivo posterior, no bloquea el cierre |
 | 8 | ✅ CRM «Sitio web»: contenido editable de la landing (Hero, Nosotros, mensaje de vigencia del PDF), FAQ editable, galería re-enlazada como sub-tab, **todo en base de datos** (tabla `site_contents` clave-valor + tabla `faqs`), sin editor de bloques. Nuevo chrome del admin = navbar horizontal del `diseño/dashboard-v1.pdf` (Resumen · Cotizaciones · Clientes · Calendario · Sitio web) con placeholders «Próximamente» para lo aún no construido — ver §11 bis | El dueño edita el título del Hero y una pregunta de FAQ desde el panel y se refleja en el sitio sin deploy — **cerrado**, `pint --test` y `php artisan test` (87) verdes |
 | 9 | ✅ Entidad **Clientes** (alta manual): `clientes` + `cliente_direcciones`, CRUD maestro-detalle en `/admin/clientes` — ver §11 quater. Convención de dominio OT/instalaciones/sin-TK anotada en §11 ter | El dueño da de alta un cliente con sus direcciones desde el panel — **cerrado**, `php artisan test` (95) y `pint --test` verdes |
 | 10 | ✅ **Calendario / agenda interna**: tabla `eventos` (genérica, preparada para Google Calendar), grilla mensual a mano + agendas semanal/mensual + CRUD de eventos en `/admin/calendario` — ver §11 quinquies. Google Calendar queda para su propio sprint | El dueño agenda un evento y lo ve en la grilla del mes — **cerrado**, `php artisan test` (110) y `pint --test` verdes |
-| 11 | ✅ **Dashboard Resumen** (`/admin/resumen`, ahora la home del admin): 4 KPIs (cotizaciones del mes + % vs mes anterior, pendientes, clientes activos, ticket promedio) + "trabajos de esta semana" (de `eventos`) + "últimas cotizaciones" — ver §11 sexies. Criterios aproximados a los datos de hoy, documentados; se afinan con el rediseño de Cotizaciones y las OT | El dueño abre el panel y ve la actividad del mes de un vistazo — **cerrado**, `php artisan test` (120) y `pint --test` verdes |
-| 12–16 | CRM restante (sincronización con Google Calendar, rediseño de Cotizaciones con folio y estados + creación de OT al aceptar + `trabajos.evento_id` + historial en ficha de Cliente) — Cotizaciones al final. Diseño: `diseño/dashboard-v1.pdf` (9 páginas) | Ver desglose sprint por sprint cuando se aborde cada uno |
+| 11 | ✅ **Dashboard Resumen** (`/admin/resumen`, home del admin): 4 KPIs + "trabajos de esta semana" (de `eventos`) + "últimas cotizaciones" — ver §11 sexies | **cerrado**, `php artisan test` (120) y `pint --test` verdes |
+| 12 | ✅ **Rediseño de Cotizaciones** — ver §11 septies. Se **eliminó** el motor de cálculo automático completo (cotizador público, `CotizacionCalculatorService`, tarifas, catálogos `tipos_*`, `tramos_altura`, `visitas`). El formulario del sitio crea un `Cliente`. Cotizaciones internas con ítems libres, estados `borrador→generada→aceptada→rechazada`, folio, PDF adaptado. Al aceptar → se crea la **OT** (`trabajos`) | El dueño arma una cotización a mano, la acepta y se crea la orden de trabajo — **cerrado**, `php artisan test` (96) y `pint --test` verdes |
+| 13–16 | CRM restante: sincronización con Google Calendar; historial de OT + cotizaciones + alerta de mantención en la ficha de Cliente; agenda de OT en el Calendario (`trabajos.evento_id`). Diseño: `diseño/dashboard-v1.pdf` | Ver desglose cuando se aborde cada uno |
 | Final | Editor de páginas por bloques avanzado (ex-Sprint 5b, ver §11), al estilo WordPress + Otter Blocks — **última pieza del roadmap, después de todo el CRM** | Página editada por bloques desde el panel se refleja en el sitio sin deploy |
 
-> **Nota sobre el modelo de negocio (post-Sprint 7):** el cotizador automático (`CotizadorWizard`) permanece oculto — el dueño cotiza manualmente tras la visita técnica. Los precios de referencia por m² que ahora se muestran en la landing (sección "Tipos de Malla") son **contenido informativo**, no alimentan ningún cálculo del sistema. `CotizacionCalculatorService`, `tarifas` y `tipos_malla` (con su multiplicador) siguen existiendo tal cual, sin consumidor público activo.
->
-> Sprint 1 antes que cualquier pixel. Si la fórmula de precio cambia después de tener UI, se rehace la UI.
+> **Nota sobre el modelo de negocio (post-Sprint 12):** el dueño cotiza **siempre a mano** en el panel. El motor de cálculo automático (`CotizacionCalculatorService`, `tarifas`, catálogos) se **eliminó**. Los precios de referencia por m² de la sección "Tipos de Malla" son **contenido informativo** hardcodeado, no alimentan nada.
 >
 > **Sprint 5c antes que el Sprint 6:** el dueño necesita enterarse de leads reales por correo durante la semana en paralelo con Wix, no solo después del corte de DNS. Documento de referencia completo: `./plan-correo.md`.
 
@@ -437,9 +386,9 @@ Todo en la carpeta `./diseño`:
 - **Imágenes** — reusa `App\Livewire\Admin\Galeria\GaleriaIndex` tal cual, embebido como `<livewire:...>` (su `->layout()` se ignora al anidarse).
 - **FAQ** (`FaqManager`) — CRUD inline: agregar/editar/eliminar filas, toggle `publicada`, el orden se deriva del índice del array al guardar (sin drag-and-drop). `updateOrCreate` por `id` en `DB::transaction`.
 
-**Tests (87 en verde):** `SiteContentServiceTest`, `ContenidoFormTest`, `FaqManagerTest`, `CrmNavegacionTest`, más los casos de vigencia en `CotizacionPdfDataBuilderTest` y el reseed de FAQ en `LandingPageTest`. `phpunit.xml` fuerza `CACHE_SITE_CONTENT_STORE=array` igual que `CACHE_TARIFAS_STORE`.
+**Tests:** `SiteContentServiceTest`, `ContenidoFormTest`, `FaqManagerTest`, `CrmNavegacionTest`, casos de vigencia en `CotizacionPdfDataBuilderTest`, reseed de FAQ en `LandingPageTest`. `phpunit.xml` fuerza `CACHE_SITE_CONTENT_STORE=array`.
 
-**No se tocó** el esquema de Cotizaciones / Calendario — eso va en sus propios sprints.
+**No se tocó** el esquema de Calendario — eso va en su propio sprint (Sprint 10). Cotizaciones se rediseñó en el Sprint 12 (§11 septies).
 
 ### 11 ter. Convención de dominio del CRM (decidida por el dueño, Sprint 9)
 
@@ -447,7 +396,7 @@ Flujo de negocio, de principio a fin:
 
 1. El cliente pide una cotización por **WhatsApp** o por la **landing** (que en la práctica lo lleva al chat de WhatsApp — el `CotizadorWizard` con precio automático sigue oculto, ver memoria `cotizador_oculto_formulario_contacto`).
 2. El dueño **da de alta el Cliente** en el panel (Sprint 9).
-3. El dueño **crea una Cotización** para **una dirección de ese cliente**. Estados de la cotización: `borrador → generada → aceptada → rechazada` (rediseño del sprint de Cotizaciones; hoy la tabla usa el enum viejo `borrador|contactado|agendado|cerrado|perdido`, ver §5).
+3. El dueño **crea una Cotización** para **una dirección de ese cliente** (`/admin/cotizaciones/nueva`), con ítems de línea libres. Estados: `borrador → generada → aceptada → rechazada` (`Cotizacion::ESTADOS`, §11 septies).
 4. Cuando el cliente **acepta** la cotización, recién ahí se crea una **OT (Orden de Trabajo)** = tabla `trabajos`.
    - Una OT es **una salida a terreno con un objetivo**: ir a cotizar, instalar, dar mantención, cambiar una pieza de instalación o retirar. Lleva `titulo` + `descripcion` que explican ese objetivo.
    - La OT tiene **doble relación**: `cliente_id` **y** `cotizacion_id` (ambas pueden ser null en las primeras etapas — p. ej. una OT de "ir a cotizar" aún no tiene cotización). Con esa doble FK **no hacen falta tickets (TK)** — se descartó esa entidad.
@@ -456,7 +405,7 @@ Flujo de negocio, de principio a fin:
 5. Cuando una OT se **agenda** (día + hora), genera un **`evento`** relacionado (§11 quinquies). **La OT apunta al evento** (`trabajos.evento_id`), no al revés — así el calendario es compatible con formatos estándar y con el futuro Google Calendar. También existen eventos **que no son OT**: llamar a un cliente, enviar una cotización → `evento` tipo `oficina`, sin OT.
 6. El historial de OT ejecutadas y las cotizaciones relacionadas se muestran en la ficha del Cliente — **se implementa en el sprint de Cotizaciones**, cuando exista la doble relación.
 
-`trabajos`, `trabajo_fotos`, `consumos`, `trabajos.evento_id` y el vínculo `cotizaciones.cliente_id` **no se crearon todavía** — su modelado definitivo se cierra en el sprint de Cotizaciones (el último del CRM). La app móvil de instaladores (Etapa 2) puebla las OT en terreno; las OT viejas pre-sistema las carga el dueño a mano.
+`trabajos` (mínima) y `cotizaciones.cliente_id` / `cliente_direccion_id` **ya existen** (Sprint 12). `trabajo_fotos`, `consumos` y el poblado de `trabajos.evento_id` (agendar la OT) siguen pendientes (Etapa 2 / Sprints 13+). La app móvil de instaladores puebla las OT en terreno; las OT viejas pre-sistema las carga el dueño a mano.
 
 ### 11 quater. Sprint 9 — entidad Clientes (implementado)
 
@@ -482,5 +431,25 @@ Flujo de negocio, de principio a fin:
   - **Pendientes**: `cotizaciones` en estado `borrador` (decisión del dueño — un lead que llegó y nadie procesó). Se remapea a los estados nuevos al rediseñar Cotizaciones.
   - **Clientes activos**: `Cliente::has('direcciones')` — "con dirección registrada". Pasará a "con OT ejecutada" cuando existan las OT.
   - **Ticket promedio**: `avg(total_max)` de cotizaciones con `total_max > 0` (techo del rango, no el precio real — el negocio cotiza a mano). Con variación % mensual.
-- **Listados:** "Trabajos de esta semana" (de `eventos`, semana en curso, sin cancelados, máx 8; enlaza a `/admin/calendario`) y "Últimas cotizaciones" (6 más recientes; enlaza a `/admin/leads/{id}` — el panel de Leads del Sprint 5 sigue siendo el detalle hasta el rediseño de Cotizaciones).
-- **Tests:** `ResumenIndexTest` (9 casos, con `Carbon::setTestNow`; el helper fuerza `created_at` con `saveQuietly` porque no está en `$fillable`) + `CrmNavegacionTest` actualizado. `php artisan test` **120 en verde**, `pint --test` verde.
+  - Nota post-Sprint 12: "Ticket promedio" ahora es sobre `total_max`, que con ítems libres = `neto`; "Pendientes" sigue siendo estado `borrador`.
+- **Listados:** "Trabajos de esta semana" (de `eventos`) y "Últimas cotizaciones" (6 más recientes; enlaza a `/admin/cotizaciones?seleccionada={id}`).
+- **Tests:** `ResumenIndexTest` (9 casos, `Carbon::setTestNow`) + `CrmNavegacionTest`.
+
+### 11 septies. Sprint 12 — Rediseño de Cotizaciones (implementado)
+
+**Demolición del motor de cálculo automático.** Eliminados: `CotizadorWizard` / `PanelPrecio` / `ItemEspacio` (+ vistas), `CotizacionCalculatorService`, `TarifaCacheService` + `TarifaObserver`, DTOs `CotizacionCalculoResultado` / `ItemCalculoResultado`, CRUD admin de Tarifas (`TarifasMatriz`), CRUD de Leads (`LeadsIndex` / `LeadDetalle`), `Proximamente`, modelos `Tarifa` / `TramoAltura` / `TipoEspacio` / `TipoMalla` / `Visita`, sus seeders, `config('cache.tarifas_store')` + `CACHE_TARIFAS_STORE`. Migración `redesign_cotizaciones_for_manual_crm` dropea las tablas `tarifas`, `tramos_altura`, `tipos_espacio`, `tipos_malla`, `visitas`. `protection-grid.blade.php` y `GaleriaItem` / `GaleriaForm` / `GaleriaItemSeeder` perdieron su dependencia de `tipos_espacio` (contenido hardcodeado / columna dropeada).
+
+**Formulario público → Cliente.** `SolicitudContacto::enviar()` crea/actualiza un `Cliente` (match por `telefono`, `firstOrNew`) + su dirección — ya no una `Cotizacion`. Honeypot + throttle sin cambios. Dispara `App\Jobs\NotificarNuevoCliente` → `App\Mail\NuevoClienteAdmin` (`emails/nuevo-cliente-admin.blade.php`). `clientes.notificado_at` (idempotencia). `App\Console\Commands\ReintentarNotificaciones` reencola clientes sin notificar. **Se eliminaron** `EnviarNotificacionesCotizacion`, `NuevaCotizacionAdmin`, `CopiaCotizacionCliente` y sus vistas — el plan-correo (Sprint 5c) ahora notifica clientes, no cotizaciones.
+
+**Cotización interna.** `cotizaciones` gana `cliente_id` / `cliente_direccion_id` / `descuento_pct`; pierde `uuid` / `canal` / `requiere_visita` / `utm_source` / `ip_hash`; `nombre` / `telefono` pasan a nullable (copia de conveniencia). Enum estado → `borrador|generada|aceptada|rechazada` (remapeo de datos; en MySQL `ALTER … MODIFY`, SQLite lo guarda como texto). `Cotizacion::numero` → `folio`. `Cotizacion` gana accessors `neto` / `iva` / `total` (`IVA_TASA = 0.19`) y relaciones `cliente` / `clienteDireccion` / `trabajo`. `cotizacion_items` pasa a líneas libres (`descripcion`, `precio_unitario`, `cantidad`, `descuento_pct`, `subtotal`); `CotizacionItem::calcularSubtotal()` centraliza la fórmula de línea.
+
+**Panel** (`/admin/cotizaciones`, reemplaza el placeholder):
+- `CotizacionesIndex` — listado paginado con filtro por estado + panel de vista previa (folio, cliente, ítems, total, badges de estado, cambio de estado, "Descargar PDF", editar, eliminar/soft delete). `#[Url]` en `estadoFiltro` y `seleccionada`.
+- `CotizacionForm` (`/admin/cotizaciones/nueva`, `/admin/cotizaciones/{cotizacion}/editar`) — cliente existente (buscador) o nuevo, dirección del trabajo (de las del cliente o texto libre → se guarda como dirección del cliente), ítems de línea libres con subtotales en vivo, descuento global, Neto/IVA/Total reactivos (`#[Computed]`). Guarda en `DB::transaction`, borra y recrea los items.
+- `App\Services\CotizacionEstadoService::cambiar()` — cambio de estado; al pasar a `aceptada` crea la **OT** (`App\Models\Trabajo`) con doble FK `cliente_id` + `cotizacion_id`, estado `pendiente`, **idempotente** (no duplica si ya hay OT). `Trabajo` tiene accessor `mantencion_vencida` (`finalizado_at + meses_mantencion < hoy`, solo si `estado === 'ejecutada'`).
+
+**PDF** — `CotizacionPdfDataBuilder` + `pdf/cotizacion.blade.php` adaptados a líneas libres (columnas Descripción/P.unitario/Cant./Desc./Subtotal), datos de cliente desde la relación, `folio`, `FechaEsp::largo()`. Ruta `GET /admin/cotizaciones/{cotizacion}/pdf` (`CotizacionPdfController`). `mensajeVigencia` sigue editable en `site_contents` (§8).
+
+**Tests:** `CotizacionFormTest` (6), `CotizacionesIndexTest` (5, incluye idempotencia de la OT), `CotizacionPdfDataBuilderTest` reescrito, `CotizacionSoftDeleteTest` reescrito, `SolicitudContactoTest` reescrito (crea Cliente + notificación), `LandingPageTest` / `AdminAccessTest` / `CrmNavegacionTest` actualizados. `php artisan test` **96 en verde**, `pint --test` verde, `migrate:fresh --seed` OK.
+
+**Pendiente (Sprints 13+):** historial de OT + cotizaciones + alerta de mantención en la ficha de Cliente; agenda de OT en el Calendario vía `trabajos.evento_id`; sincronización con Google Calendar.

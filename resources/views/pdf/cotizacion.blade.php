@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Cotización N° {{ $numero }}</title>
+    <title>Cotización N° {{ $folio }}</title>
     <style>
         @page { margin: 36px 40px; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #211D1C; }
@@ -50,7 +50,6 @@
         }
         table.items tbody td.num { text-align: right; white-space: nowrap; }
         table.items tbody td.subtotal { font-weight: bold; }
-        .pendiente { color: #3A3533; font-style: italic; }
 
         table.totales { width: 100%; margin-top: 16px; }
         table.totales td { padding: 3px 0; font-size: 11px; }
@@ -104,7 +103,7 @@
             <td style="width: 40%; text-align: right;">
                 <span class="badge">COTIZACIÓN</span>
                 <p class="numero-label">N°</p>
-                <p class="numero">{{ $numero }}</p>
+                <p class="numero">{{ $folio }}</p>
             </td>
         </tr>
     </table>
@@ -121,10 +120,10 @@
             </td>
             <td>
                 <p class="partes-label">CLIENTE</p>
-                <p class="partes-nombre">{{ $cotizacion->nombre }}</p>
+                <p class="partes-nombre">{{ $cliente['nombre'] }}</p>
                 <p class="partes-detalle">
-                    {{ $cotizacion->direccion ?: 'Arica' }}<br>
-                    {{ $cotizacion->telefono }}{{ $cotizacion->email ? ' · '.$cotizacion->email : '' }}
+                    {{ $cliente['direccion'] }}<br>
+                    {{ $cliente['contacto'] }}
                 </p>
             </td>
         </tr>
@@ -136,6 +135,7 @@
                 <th>Descripción</th>
                 <th class="num">P. unitario</th>
                 <th class="num">Cant.</th>
+                <th class="num">Desc.</th>
                 <th class="num">Subtotal</th>
             </tr>
         </thead>
@@ -143,19 +143,22 @@
             @foreach ($lineas as $linea)
                 <tr>
                     <td>{{ $linea['descripcion'] }}</td>
-                    @if ($linea['pendiente'])
-                        <td class="num" colspan="3"><span class="pendiente">A confirmar en visita técnica</span></td>
-                    @else
-                        <td class="num">${{ number_format($linea['precioUnitario'], 0, ',', '.') }}</td>
-                        <td class="num">{{ number_format($linea['cantidad'], 1, ',', '.') }}</td>
-                        <td class="num subtotal">${{ number_format($linea['subtotal'], 0, ',', '.') }}</td>
-                    @endif
+                    <td class="num">${{ number_format($linea['precioUnitario'], 0, ',', '.') }}</td>
+                    <td class="num">{{ rtrim(rtrim(number_format($linea['cantidad'], 2, ',', '.'), '0'), ',') }}</td>
+                    <td class="num">{{ $linea['descuentoPct'] > 0 ? number_format($linea['descuentoPct'], 0).'%' : '—' }}</td>
+                    <td class="num subtotal">${{ number_format($linea['subtotal'], 0, ',', '.') }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
     <table class="totales">
+        @if ($descuentoPct > 0)
+            <tr>
+                <td class="label">Descuento sobre neto ({{ number_format($descuentoPct, 0) }}%)</td>
+                <td class="valor">incluido</td>
+            </tr>
+        @endif
         <tr>
             <td class="label">Neto</td>
             <td class="valor">${{ number_format($neto, 0, ',', '.') }}</td>

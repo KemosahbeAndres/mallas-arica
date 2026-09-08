@@ -2,9 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Mail\CopiaCotizacionCliente;
-use App\Mail\NuevaCotizacionAdmin;
-use App\Models\Cotizacion;
+use App\Mail\NuevoClienteAdmin;
+use App\Models\Cliente;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -14,7 +13,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
-class EnviarNotificacionesCotizacion implements ShouldQueue
+/**
+ * Avisa al dueño de un contacto nuevo llegado por el formulario del sitio.
+ * Idempotente: no reenvía si el cliente ya tiene `notificado_at`.
+ */
+class NotificarNuevoCliente implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -24,28 +27,24 @@ class EnviarNotificacionesCotizacion implements ShouldQueue
     public array $backoff = [30, 120];
 
     public function __construct(
-        public Cotizacion $cotizacion,
+        public Cliente $cliente,
     ) {}
 
     public function handle(): void
     {
-        if ($this->cotizacion->notificado_at !== null) {
+        if ($this->cliente->notificado_at !== null) {
             return;
         }
 
-        Mail::send(new NuevaCotizacionAdmin($this->cotizacion));
+        Mail::send(new NuevoClienteAdmin($this->cliente));
 
-        if ($this->cotizacion->email) {
-            Mail::send(new CopiaCotizacionCliente($this->cotizacion));
-        }
-
-        $this->cotizacion->forceFill(['notificado_at' => now()])->save();
+        $this->cliente->forceFill(['notificado_at' => now()])->save();
     }
 
     public function failed(Throwable $exception): void
     {
-        Log::error('No se pudo notificar la cotización', [
-            'cotizacion_id' => $this->cotizacion->id,
+        Log::error('No se pudo notificar el nuevo cliente', [
+            'cliente_id' => $this->cliente->id,
             'error' => $exception->getMessage(),
         ]);
     }

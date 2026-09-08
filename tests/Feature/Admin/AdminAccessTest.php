@@ -9,14 +9,14 @@ class AdminAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_invitado_es_redirigido_al_login_desde_tarifas(): void
+    public function test_invitado_es_redirigido_al_login_desde_cotizaciones(): void
     {
-        $this->get('/admin/tarifas')->assertRedirect('/admin/login');
+        $this->get('/admin/cotizaciones')->assertRedirect('/admin/login');
     }
 
-    public function test_invitado_es_redirigido_al_login_desde_leads(): void
+    public function test_invitado_es_redirigido_al_login_desde_clientes(): void
     {
-        $this->get('/admin/leads')->assertRedirect('/admin/login');
+        $this->get('/admin/clientes')->assertRedirect('/admin/login');
     }
 
     public function test_invitado_es_redirigido_al_login_desde_galeria(): void

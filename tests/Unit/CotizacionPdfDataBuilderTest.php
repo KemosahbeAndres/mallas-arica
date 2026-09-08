@@ -4,9 +4,6 @@ namespace Tests\Unit;
 
 use App\Models\Cotizacion;
 use App\Models\SiteContent;
-use App\Models\TipoEspacio;
-use App\Models\TipoMalla;
-use App\Models\TramoAltura;
 use App\Services\CotizacionPdfDataBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,128 +14,79 @@ class CotizacionPdfDataBuilderTest extends TestCase
 
     private CotizacionPdfDataBuilder $builder;
 
-    private TipoEspacio $ventana;
-
-    private TipoMalla $mallaEstandar;
-
-    private TramoAltura $tramoHasta1_5;
-
     protected function setUp(): void
     {
         parent::setUp();
-
         $this->builder = app(CotizacionPdfDataBuilder::class);
-
-        $this->ventana = TipoEspacio::create([
-            'slug' => 'ventana',
-            'nombre' => 'Ventanas',
-            'permite_calculo' => true,
-        ]);
-
-        $this->mallaEstandar = TipoMalla::create([
-            'slug' => 'estandar',
-            'nombre' => 'Estándar',
-            'grosor_mm' => 0.8,
-            'rombo_cm' => 3.0,
-            'multiplicador' => 1.0,
-        ]);
-
-        $this->tramoHasta1_5 = TramoAltura::create([
-            'etiqueta' => 'Hasta 1,5 m',
-            'altura_min' => 0,
-            'altura_max' => 1.5,
-            'requiere_visita' => false,
-        ]);
     }
 
-    public function test_calcula_el_numero_correlativo_a_partir_del_id(): void
+    private function cotizacionConItems(): Cotizacion
     {
         $cotizacion = Cotizacion::create([
             'nombre' => 'Juan Pérez',
             'telefono' => '+56912345678',
-            'canal' => 'web',
-            'estado' => 'borrador',
-        ]);
-
-        $datos = $this->builder->construir($cotizacion);
-
-        $this->assertSame(str_pad((string) $cotizacion->id, 4, '0', STR_PAD_LEFT), $datos['numero']);
-    }
-
-    public function test_precio_unitario_usa_el_maximo_del_rango_con_multiplicador(): void
-    {
-        $cotizacion = Cotizacion::create([
-            'nombre' => 'Juan Pérez',
-            'telefono' => '+56912345678',
-            'canal' => 'web',
-            'estado' => 'borrador',
+            'email' => 'juan@correo.cl',
+            'direccion' => 'Los Aromos 221, Arica',
+            'estado' => 'generada',
+            'descuento_pct' => 0,
         ]);
 
         $cotizacion->items()->create([
-            'tipo_espacio_id' => $this->ventana->id,
-            'tipo_malla_id' => $this->mallaEstandar->id,
-            'tramo_altura_id' => $this->tramoHasta1_5->id,
-            'metros_lineales' => 3.5,
-            'precio_ml_min_snapshot' => 8000,
-            'precio_ml_max_snapshot' => 9500,
-            'multiplicador_snapshot' => 1.0,
-            'subtotal_min' => 28000,
-            'subtotal_max' => 33250,
+            'descripcion' => 'Malla de protección — ventana',
+            'precio_unitario' => 25000,
+            'cantidad' => 4,
+            'descuento_pct' => 0,
+            'subtotal' => 100000,
         ]);
 
+        return $cotizacion;
+    }
+
+    public function test_folio_se_deriva_del_id(): void
+    {
+        $cotizacion = $this->cotizacionConItems();
+
         $datos = $this->builder->construir($cotizacion);
+
+        $this->assertSame(str_pad((string) $cotizacion->id, 4, '0', STR_PAD_LEFT), $datos['folio']);
+    }
+
+    public function test_lineas_libres_con_neto_iva_y_total(): void
+    {
+        $datos = $this->builder->construir($this->cotizacionConItems());
 
         $this->assertCount(1, $datos['lineas']);
-        $this->assertFalse($datos['lineas'][0]['pendiente']);
-        $this->assertSame(9500, $datos['lineas'][0]['precioUnitario']);
-        $this->assertSame(3.5, $datos['lineas'][0]['cantidad']);
-        $this->assertSame(33250, $datos['lineas'][0]['subtotal']);
-        $this->assertSame(33250, $datos['neto']);
-        $this->assertSame((int) round(33250 * 0.19), $datos['iva']);
-        $this->assertSame(33250 + (int) round(33250 * 0.19), $datos['total']);
+        $this->assertSame(25000, $datos['lineas'][0]['precioUnitario']);
+        $this->assertSame(4.0, $datos['lineas'][0]['cantidad']);
+        $this->assertSame(100000, $datos['lineas'][0]['subtotal']);
+        $this->assertSame(100000, $datos['neto']);
+        $this->assertSame((int) round(100000 * 0.19), $datos['iva']);
+        $this->assertSame(100000 + (int) round(100000 * 0.19), $datos['total']);
     }
 
-    public function test_item_sin_tarifa_snapshot_queda_marcado_como_pendiente_y_no_suma_al_neto(): void
+    public function test_descuento_global_reduce_el_neto(): void
     {
-        $cotizacion = Cotizacion::create([
-            'nombre' => 'Juan Pérez',
-            'telefono' => '+56912345678',
-            'canal' => 'web',
-            'estado' => 'borrador',
-            'requiere_visita' => true,
-        ]);
+        $cotizacion = $this->cotizacionConItems();
+        $cotizacion->update(['descuento_pct' => 10]);
 
-        $cotizacion->items()->create([
-            'tipo_espacio_id' => $this->ventana->id,
-            'tipo_malla_id' => null,
-            'tramo_altura_id' => null,
-            'metros_lineales' => 5,
-            'precio_ml_min_snapshot' => null,
-            'precio_ml_max_snapshot' => null,
-            'multiplicador_snapshot' => null,
-            'subtotal_min' => 0,
-            'subtotal_max' => 0,
-        ]);
+        $datos = $this->builder->construir($cotizacion->fresh('items'));
 
-        $datos = $this->builder->construir($cotizacion);
+        $this->assertSame(90000, $datos['neto']);
+        $this->assertSame(10.0, $datos['descuentoPct']);
+    }
 
-        $this->assertTrue($datos['lineas'][0]['pendiente']);
-        $this->assertNull($datos['lineas'][0]['subtotal']);
-        $this->assertSame(0, $datos['neto']);
-        $this->assertSame(0, $datos['iva']);
-        $this->assertSame(0, $datos['total']);
+    public function test_datos_del_cliente_en_el_bloque_del_pdf(): void
+    {
+        $datos = $this->builder->construir($this->cotizacionConItems());
+
+        $this->assertSame('Juan Pérez', $datos['cliente']['nombre']);
+        $this->assertSame('Los Aromos 221, Arica', $datos['cliente']['direccion']);
+        $this->assertStringContainsString('juan@correo.cl', $datos['cliente']['contacto']);
     }
 
     public function test_mensaje_de_vigencia_usa_el_default_sin_contenido_configurado(): void
     {
-        $cotizacion = Cotizacion::create([
-            'nombre' => 'Juan Pérez',
-            'telefono' => '+56912345678',
-            'canal' => 'web',
-            'estado' => 'borrador',
-        ]);
-
-        $datos = $this->builder->construir($cotizacion);
+        $datos = $this->builder->construir($this->cotizacionConItems());
 
         $this->assertSame(CotizacionPdfDataBuilder::MENSAJE_VIGENCIA_DEFAULT, $datos['mensajeVigencia']);
     }
@@ -147,21 +95,14 @@ class CotizacionPdfDataBuilderTest extends TestCase
     {
         SiteContent::create([
             'key' => 'cotizaciones.mensaje_vigencia',
-            'value' => 'Vigencia de 30 días. Precio sujeto a visita técnica.',
+            'value' => 'Vigencia de 30 días.',
             'grupo' => 'cotizaciones',
             'label' => 'Mensaje de vigencia',
             'tipo' => 'textarea',
         ]);
 
-        $cotizacion = Cotizacion::create([
-            'nombre' => 'Juan Pérez',
-            'telefono' => '+56912345678',
-            'canal' => 'web',
-            'estado' => 'borrador',
-        ]);
+        $datos = $this->builder->construir($this->cotizacionConItems());
 
-        $datos = $this->builder->construir($cotizacion);
-
-        $this->assertSame('Vigencia de 30 días. Precio sujeto a visita técnica.', $datos['mensajeVigencia']);
+        $this->assertSame('Vigencia de 30 días.', $datos['mensajeVigencia']);
     }
 }

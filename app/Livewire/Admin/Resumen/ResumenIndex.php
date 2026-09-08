@@ -94,6 +94,7 @@ class ResumenIndex extends Component
     public function ultimasCotizaciones(): Collection
     {
         return Cotizacion::query()
+            ->with('cliente:id,nombre')
             ->orderByDesc('created_at')
             ->limit(6)
             ->get();

@@ -23,6 +23,6 @@ class CotizacionPdfService
 
     public function nombreArchivo(Cotizacion $cotizacion): string
     {
-        return "cotizacion-{$cotizacion->numero}.pdf";
+        return "cotizacion-{$cotizacion->folio}.pdf";
     }
 }

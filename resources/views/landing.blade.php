@@ -5,8 +5,9 @@
     <x-landing.mesh-types />
     <x-landing.how-we-work />
 
-    {{-- Cotizador en línea oculto por ahora: se cotiza en terreno tras la visita técnica --}}
-    {{-- <livewire:cotizador.cotizador-wizard /> --}}
+    {{-- Sin cotizador con precio: el negocio cotiza a mano tras la visita
+         técnica (Sprint 12). Este formulario solo capta el contacto y crea
+         un Cliente en el CRM. --}}
     <livewire:solicitud-contacto />
 
     <livewire:galeria-mosaico />

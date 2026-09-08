@@ -10,17 +10,6 @@ class CrmNavegacionTest extends TestCase
 {
     use ActuaComoAdmin, RefreshDatabase;
 
-    public function test_las_secciones_no_construidas_muestran_proximamente(): void
-    {
-        $this->actuarComoAdmin();
-
-        foreach (['cotizaciones'] as $seccion) {
-            $this->get("/admin/{$seccion}")
-                ->assertOk()
-                ->assertSee('próximamente');
-        }
-    }
-
     public function test_la_raiz_del_admin_redirige_a_resumen(): void
     {
         $this->actuarComoAdmin();
@@ -55,6 +44,16 @@ class CrmNavegacionTest extends TestCase
         $this->get('/admin/calendario')
             ->assertOk()
             ->assertSee('Agenda semanal')
+            ->assertDontSee('🚧');
+    }
+
+    public function test_cotizaciones_ya_es_una_seccion_real(): void
+    {
+        $this->actuarComoAdmin();
+
+        $this->get('/admin/cotizaciones')
+            ->assertOk()
+            ->assertSee('Nueva cotización')
             ->assertDontSee('🚧');
     }
 

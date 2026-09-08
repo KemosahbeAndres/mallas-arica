@@ -16,10 +16,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AdminUserSeeder::class,
-            TipoEspacioSeeder::class,
-            TipoMallaSeeder::class,
-            TramoAlturaSeeder::class,
-            TarifaSeeder::class,
             GaleriaItemSeeder::class,
             SiteContentSeeder::class,
             FaqSeeder::class,

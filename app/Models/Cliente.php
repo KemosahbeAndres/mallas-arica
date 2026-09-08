@@ -20,9 +20,26 @@ class Cliente extends Model
         'notas',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'notificado_at' => 'datetime',
+        ];
+    }
+
     public function direcciones(): HasMany
     {
         return $this->hasMany(ClienteDireccion::class);
+    }
+
+    public function cotizaciones(): HasMany
+    {
+        return $this->hasMany(Cotizacion::class);
+    }
+
+    public function trabajos(): HasMany
+    {
+        return $this->hasMany(Trabajo::class);
     }
 
     // El cascadeOnDelete() de la FK no dispara con soft deletes (no hay DELETE

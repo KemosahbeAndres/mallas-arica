@@ -5,12 +5,9 @@ namespace App\Services;
 use App\Models\Cotizacion;
 use App\Models\CotizacionItem;
 use App\Support\FechaEsp;
-use Carbon\Carbon;
 
 class CotizacionPdfDataBuilder
 {
-    public const IVA_TASA = 0.19;
-
     public const MENSAJE_VIGENCIA_DEFAULT = 'Esta cotización tiene una vigencia de 10 días a contar de la fecha de emisión. Los valores están expresados en pesos chilenos (CLP) e incluyen IVA según se detalla.';
 
     public const EMPRESA = [
@@ -23,78 +20,50 @@ class CotizacionPdfDataBuilder
     public function __construct(private readonly SiteContentService $siteContent) {}
 
     /**
-     * @return array{numero: string, fecha: string, empresa: array, lineas: array, neto: int, iva: int, total: int, mensajeVigencia: string}
+     * @return array{folio: string, fecha: string, empresa: array, cliente: array, lineas: array, neto: int, iva: int, total: int, descuentoPct: float, mensajeVigencia: string}
      */
     public function construir(Cotizacion $cotizacion): array
     {
-        $cotizacion->loadMissing('items.tipoEspacio', 'items.tipoMalla', 'items.tramoAltura');
+        $cotizacion->loadMissing('items', 'cliente', 'clienteDireccion');
 
-        $lineas = $cotizacion->items->map(fn (CotizacionItem $item) => $this->construirLinea($item))->all();
-
-        $neto = array_sum(array_map(
-            fn (array $linea) => $linea['pendiente'] ? 0 : $linea['subtotal'],
-            $lineas,
-        ));
-
-        $iva = (int) round($neto * self::IVA_TASA);
+        $lineas = $cotizacion->items->map(fn (CotizacionItem $item) => [
+            'descripcion' => $item->descripcion,
+            'precioUnitario' => (int) $item->precio_unitario,
+            'cantidad' => (float) $item->cantidad,
+            'descuentoPct' => (float) $item->descuento_pct,
+            'subtotal' => (int) $item->subtotal,
+        ])->all();
 
         return [
-            'numero' => $cotizacion->numero,
-            'fecha' => $this->formatearFecha($cotizacion->created_at),
+            'folio' => $cotizacion->folio,
+            'fecha' => FechaEsp::largo($cotizacion->created_at),
             'empresa' => self::EMPRESA,
+            'cliente' => $this->datosCliente($cotizacion),
             'lineas' => $lineas,
-            'neto' => $neto,
-            'iva' => $iva,
-            'total' => $neto + $iva,
+            'descuentoPct' => (float) $cotizacion->descuento_pct,
+            'neto' => $cotizacion->neto,
+            'iva' => $cotizacion->iva,
+            'total' => $cotizacion->total,
             'mensajeVigencia' => $this->siteContent->get('cotizaciones.mensaje_vigencia', self::MENSAJE_VIGENCIA_DEFAULT),
         ];
     }
 
-    private function formatearFecha(Carbon $fecha): string
+    /**
+     * @return array{nombre: string, direccion: string, contacto: string}
+     */
+    private function datosCliente(Cotizacion $cotizacion): array
     {
-        return FechaEsp::largo($fecha);
-    }
+        $cliente = $cotizacion->cliente;
 
-    private function construirLinea(CotizacionItem $item): array
-    {
-        $pendiente = $item->precio_ml_max_snapshot === null;
-
-        $descripcion = $this->construirDescripcion($item);
-
-        if ($pendiente) {
-            return [
-                'descripcion' => $descripcion,
-                'pendiente' => true,
-                'precioUnitario' => null,
-                'cantidad' => null,
-                'subtotal' => null,
-            ];
-        }
-
-        $precioUnitario = (int) round($item->precio_ml_max_snapshot * (float) $item->multiplicador_snapshot);
-        $cantidad = (float) $item->metros_lineales;
-        $subtotal = (int) round($precioUnitario * $cantidad);
+        $nombre = $cliente?->nombre ?? $cotizacion->nombre ?? 'Cliente';
+        $telefono = $cliente?->telefono ?? $cotizacion->telefono ?? '';
+        $email = $cliente?->email ?? $cotizacion->email ?? '';
+        $direccion = $cotizacion->clienteDireccion?->direccion ?? $cotizacion->direccion ?? 'Arica';
 
         return [
-            'descripcion' => $descripcion,
-            'pendiente' => false,
-            'precioUnitario' => $precioUnitario,
-            'cantidad' => $cantidad,
-            'subtotal' => $subtotal,
+            'nombre' => $nombre,
+            'direccion' => $direccion,
+            'contacto' => trim($telefono.($email ? ' · '.$email : ''), ' ·'),
         ];
-    }
-
-    private function construirDescripcion(CotizacionItem $item): string
-    {
-        $espacio = mb_strtolower($item->tipoEspacio?->nombre ?? 'espacio');
-
-        $mallaSlug = $item->tipoMalla?->slug;
-        $prefijoMalla = $mallaSlug && $mallaSlug !== 'estandar'
-            ? "Malla {$item->tipoMalla->nombre} — "
-            : 'Malla de protección estándar — ';
-
-        $tramo = $item->tramoAltura?->etiqueta;
-
-        return $prefijoMalla."instalación en {$espacio}".($tramo ? ", {$tramo}" : '');
     }
 }

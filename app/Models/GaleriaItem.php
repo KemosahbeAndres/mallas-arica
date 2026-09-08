@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
 class GaleriaItem extends Model
@@ -16,7 +15,6 @@ class GaleriaItem extends Model
     protected $fillable = [
         'foto_path',
         'titulo',
-        'tipo_espacio_id',
         'orden',
         'publicado',
     ];
@@ -26,11 +24,6 @@ class GaleriaItem extends Model
         return [
             'publicado' => 'boolean',
         ];
-    }
-
-    public function tipoEspacio(): BelongsTo
-    {
-        return $this->belongsTo(TipoEspacio::class);
     }
 
     public function getUrlAttribute(): string

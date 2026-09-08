@@ -74,15 +74,15 @@
         <div class="border-line rounded-2xl border bg-white p-5">
             <div class="flex items-center justify-between">
                 <h2 class="text-ink text-base font-bold tracking-tight">Últimas cotizaciones</h2>
-                <a href="{{ route('admin.leads.index') }}" wire:navigate
+                <a href="{{ route('admin.cotizaciones') }}" wire:navigate
                     class="text-brand-red-ui text-sm font-semibold hover:underline">Ver todas →</a>
             </div>
 
             <div class="divide-line mt-3 divide-y">
                 @forelse ($this->ultimasCotizaciones as $cot)
-                    <a href="{{ route('admin.leads.show', $cot) }}" wire:navigate
+                    <a href="{{ route('admin.cotizaciones', ['seleccionada' => $cot->id]) }}" wire:navigate
                         class="hover:bg-cream-deep/60 flex items-center justify-between gap-3 py-3 text-sm">
-                        <span class="text-ink font-medium">{{ $cot->nombre }}</span>
+                        <span class="text-ink font-medium">{{ $cot->cliente?->nombre ?? $cot->nombre ?? '—' }}</span>
                         <span class="text-right">
                             <span class="text-ink block font-semibold">
                                 @if ($cot->total_max > 0){{ $clp($cot->total_max) }}@else<span class="text-ink-soft font-normal">Sin monto</span>@endif

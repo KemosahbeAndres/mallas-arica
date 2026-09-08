@@ -5,10 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
 
 class Cotizacion extends Model
 {
@@ -16,59 +16,76 @@ class Cotizacion extends Model
 
     protected $table = 'cotizaciones';
 
-    /** Únicos valores válidos, hoy declarados solo en la migración (enum de BD). */
-    public const ESTADOS = ['borrador', 'contactado', 'agendado', 'cerrado', 'perdido'];
+    /** Flujo: borrador → generada → aceptada → rechazada (Sprint 12). */
+    public const ESTADOS = ['borrador', 'generada', 'aceptada', 'rechazada'];
+
+    public const IVA_TASA = 0.19;
 
     protected $fillable = [
-        'uuid',
+        'cliente_id',
+        'cliente_direccion_id',
         'nombre',
         'telefono',
         'email',
         'direccion',
-        'canal',
         'estado',
+        'descuento_pct',
         'total_min',
         'total_max',
-        'requiere_visita',
-        'utm_source',
-        'ip_hash',
     ];
 
     protected function casts(): array
     {
         return [
-            'requiere_visita' => 'boolean',
+            'descuento_pct' => 'decimal:2',
             'notificado_at' => 'datetime',
         ];
     }
 
     /**
-     * Número correlativo público de la cotización (ej. "0047"), derivado del id.
-     * Reemplaza al antiguo código alfanumérico MA-XXXX: es el único identificador
-     * que se muestra al cliente (WhatsApp, PDF, pantalla de confirmación).
+     * Folio público de la cotización (ej. "0047"), derivado del id. Único
+     * identificador visible: PDF, listado del panel, encabezado de la ficha.
+     * Antes se llamaba `numero` (Sprint 12 lo renombró a `folio`, como el mockup).
      */
-    protected function numero(): Attribute
+    protected function folio(): Attribute
     {
         return Attribute::make(
             get: fn () => str_pad((string) $this->id, 4, '0', STR_PAD_LEFT),
         );
     }
 
+    /** Neto = suma de subtotales de las líneas, menos el descuento global. */
+    protected function neto(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $bruto = $this->items->sum('subtotal');
+
+                return (int) round($bruto * (1 - ((float) $this->descuento_pct / 100)));
+            },
+        );
+    }
+
+    protected function iva(): Attribute
+    {
+        return Attribute::make(get: fn () => (int) round($this->neto * self::IVA_TASA));
+    }
+
+    protected function total(): Attribute
+    {
+        return Attribute::make(get: fn () => $this->neto + $this->iva);
+    }
+
     protected static function booted(): void
     {
-        static::creating(function (Cotizacion $cotizacion) {
-            $cotizacion->uuid ??= (string) Str::uuid();
-        });
-
         // El cascadeOnDelete() de la FK no dispara con soft deletes (no hay
-        // DELETE real). Se replica la cascada a mano para items y visita.
+        // DELETE real). Se replica la cascada a mano para los items.
         static::deleting(function (Cotizacion $cotizacion) {
             if ($cotizacion->isForceDeleting()) {
                 return;
             }
 
             $cotizacion->items()->delete();
-            $cotizacion->visita()->delete();
         });
     }
 
@@ -77,8 +94,18 @@ class Cotizacion extends Model
         return $this->hasMany(CotizacionItem::class);
     }
 
-    public function visita(): HasOne
+    public function cliente(): BelongsTo
     {
-        return $this->hasOne(Visita::class);
+        return $this->belongsTo(Cliente::class);
+    }
+
+    public function clienteDireccion(): BelongsTo
+    {
+        return $this->belongsTo(ClienteDireccion::class);
+    }
+
+    public function trabajo(): HasOne
+    {
+        return $this->hasOne(Trabajo::class);
     }
 }
