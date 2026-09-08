@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Cotizacion;
 use App\Models\CotizacionItem;
+use App\Support\FechaEsp;
 use Carbon\Carbon;
 
 class CotizacionPdfDataBuilder
@@ -17,12 +18,6 @@ class CotizacionPdfDataBuilder
         'direccion' => 'Av. Diego Portales #1333, Arica',
         'telefono' => '+56 9 8645 5205',
         'email' => 'contacto@mallasarica.cl',
-    ];
-
-    private const MESES = [
-        1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
-        5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
-        9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre',
     ];
 
     public function __construct(private readonly SiteContentService $siteContent) {}
@@ -57,7 +52,7 @@ class CotizacionPdfDataBuilder
 
     private function formatearFecha(Carbon $fecha): string
     {
-        return "{$fecha->day} de ".self::MESES[$fecha->month]." de {$fecha->year}";
+        return FechaEsp::largo($fecha);
     }
 
     private function construirLinea(CotizacionItem $item): array

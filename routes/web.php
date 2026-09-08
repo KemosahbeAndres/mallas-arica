@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Admin\Auth\Login;
+use App\Livewire\Admin\Calendario\CalendarioIndex;
 use App\Livewire\Admin\Clientes\ClientesIndex;
 use App\Livewire\Admin\Galeria\GaleriaIndex;
 use App\Livewire\Admin\Leads\LeadDetalle;
@@ -31,9 +32,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->defaults('seccion', 'Cotizaciones')
             ->defaults('detalle', 'El rediseño de cotizaciones con folio y estados es la última pieza del CRM. Por ahora los leads se ven en la sección Tarifas → Leads del panel anterior.');
         Route::get('/clientes', ClientesIndex::class)->name('clientes');
-        Route::get('/calendario', Proximamente::class)->name('calendario')
-            ->defaults('seccion', 'Calendario')
-            ->defaults('detalle', 'La agenda de trabajos y la sincronización con Google Calendar llegan en una próxima entrega.');
+        Route::get('/calendario', CalendarioIndex::class)->name('calendario');
 
         // Rutas del panel del Sprint 5 — siguen vivas (enlaces guardados, tests).
         Route::get('/tarifas', TarifasMatriz::class)->name('tarifas');

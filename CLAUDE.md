@@ -270,6 +270,17 @@ faqs:            id, pregunta, respuesta, orden, publicada(bool), timestamps
 clientes:            id, nombre, telefono(null), email(null), notas(null),
                      timestamps, deleted_at
 cliente_direcciones: id, cliente_id, direccion, etiqueta(null), timestamps
+
+// Implementado Sprint 10 — agenda interna (§11 quinquies). Unidad de agenda
+// genérica, compatible con calendarios estándar. La OT (tabla `trabajos`,
+// sprint de Cotizaciones) apuntará a su evento vía trabajos.evento_id — el
+// evento no sabe de la OT. google_event_id se declara ya para el sync futuro,
+// sin uso todavía.
+eventos:         id, titulo, descripcion(null), tipo(terreno|oficina),
+                 estado(agendado|hecho|cancelado), inicio(datetime),
+                 fin(datetime null), todo_el_dia(bool), cliente_id(null),
+                 ubicacion(null), notas(null), google_event_id(null, unique),
+                 timestamps, deleted_at
 ```
 
 **Índices:** `cotizaciones(estado, created_at)`, `trabajo_fotos(trabajo_id, tipo)`.
@@ -361,7 +372,8 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 7 | ✅ Ajustes de contenido/negocio en la landing pedidos por el dueño (sección "Tipos de Malla" con 3 espesores + precios de referencia, sistemas de instalación Netzen/aluminio, redes sociales en footer, imagen del hero) — ver §4.1 | Sección Tipos de Malla + redes sociales + placeholder de marca del hero **implementados**, `pint --test` y `php artisan test` (70) verdes — **cerrado**. La foto real del Morro de Arica (insumo del dueño) es un swap de archivo posterior, no bloquea el cierre |
 | 8 | ✅ CRM «Sitio web»: contenido editable de la landing (Hero, Nosotros, mensaje de vigencia del PDF), FAQ editable, galería re-enlazada como sub-tab, **todo en base de datos** (tabla `site_contents` clave-valor + tabla `faqs`), sin editor de bloques. Nuevo chrome del admin = navbar horizontal del `diseño/dashboard-v1.pdf` (Resumen · Cotizaciones · Clientes · Calendario · Sitio web) con placeholders «Próximamente» para lo aún no construido — ver §11 bis | El dueño edita el título del Hero y una pregunta de FAQ desde el panel y se refleja en el sitio sin deploy — **cerrado**, `pint --test` y `php artisan test` (87) verdes |
 | 9 | ✅ Entidad **Clientes** (alta manual): `clientes` + `cliente_direcciones`, CRUD maestro-detalle en `/admin/clientes` — ver §11 quater. Convención de dominio OT/instalaciones/sin-TK anotada en §11 ter | El dueño da de alta un cliente con sus direcciones desde el panel — **cerrado**, `php artisan test` (95) y `pint --test` verdes |
-| 10–16 | CRM restante (dashboard Resumen, Calendario interno y con Google, rediseño de Cotizaciones con folio y estados + creación de OT al aceptar + historial en ficha de Cliente) — Cotizaciones al final. Diseño: `diseño/dashboard-v1.pdf` (9 páginas) | Ver desglose sprint por sprint cuando se aborde cada uno |
+| 10 | ✅ **Calendario / agenda interna**: tabla `eventos` (genérica, preparada para Google Calendar), grilla mensual a mano + agendas semanal/mensual + CRUD de eventos en `/admin/calendario` — ver §11 quinquies. Google Calendar queda para su propio sprint | El dueño agenda un evento y lo ve en la grilla del mes — **cerrado**, `php artisan test` (110) y `pint --test` verdes |
+| 11–16 | CRM restante (dashboard Resumen, sincronización con Google Calendar, rediseño de Cotizaciones con folio y estados + creación de OT al aceptar + `trabajos.evento_id` + historial en ficha de Cliente) — Cotizaciones al final. Diseño: `diseño/dashboard-v1.pdf` (9 páginas) | Ver desglose sprint por sprint cuando se aborde cada uno |
 | Final | Editor de páginas por bloques avanzado (ex-Sprint 5b, ver §11), al estilo WordPress + Otter Blocks — **última pieza del roadmap, después de todo el CRM** | Página editada por bloques desde el panel se refleja en el sitio sin deploy |
 
 > **Nota sobre el modelo de negocio (post-Sprint 7):** el cotizador automático (`CotizadorWizard`) permanece oculto — el dueño cotiza manualmente tras la visita técnica. Los precios de referencia por m² que ahora se muestran en la landing (sección "Tipos de Malla") son **contenido informativo**, no alimentan ningún cálculo del sistema. `CotizacionCalculatorService`, `tarifas` y `tipos_malla` (con su multiplicador) siguen existiendo tal cual, sin consumidor público activo.
@@ -436,12 +448,14 @@ Flujo de negocio, de principio a fin:
 2. El dueño **da de alta el Cliente** en el panel (Sprint 9).
 3. El dueño **crea una Cotización** para **una dirección de ese cliente**. Estados de la cotización: `borrador → generada → aceptada → rechazada` (rediseño del sprint de Cotizaciones; hoy la tabla usa el enum viejo `borrador|contactado|agendado|cerrado|perdido`, ver §5).
 4. Cuando el cliente **acepta** la cotización, recién ahí se crea una **OT (Orden de Trabajo)** = tabla `trabajos`.
-   - La OT tiene **doble relación**: `cliente_id` **y** `cotizacion_id`. Con esa doble FK **no hacen falta tickets (TK)** — se descartó esa entidad.
+   - Una OT es **una salida a terreno con un objetivo**: ir a cotizar, instalar, dar mantención, cambiar una pieza de instalación o retirar. Lleva `titulo` + `descripcion` que explican ese objetivo.
+   - La OT tiene **doble relación**: `cliente_id` **y** `cotizacion_id` (ambas pueden ser null en las primeras etapas — p. ej. una OT de "ir a cotizar" aún no tiene cotización). Con esa doble FK **no hacen falta tickets (TK)** — se descartó esa entidad.
    - Una OT en estado **ejecutado** es lo que el mockup de la ficha de Cliente (`diseño/dashboard-v1.pdf` pág. 5) llama «instalación». **No hay tabla `instalaciones` separada**: es la misma OT en otro estado.
    - La alerta «Mantención vencida» se calcula sobre la OT ejecutada (`finalizado_at + meses_mantencion < hoy`). `meses_mantencion` se agrega a `trabajos` en el sprint de Cotizaciones.
-5. El historial de OT ejecutadas y las cotizaciones relacionadas se muestran en la ficha del Cliente — **se implementa en el sprint de Cotizaciones**, cuando exista la doble relación.
+5. Cuando una OT se **agenda** (día + hora), genera un **`evento`** relacionado (§11 quinquies). **La OT apunta al evento** (`trabajos.evento_id`), no al revés — así el calendario es compatible con formatos estándar y con el futuro Google Calendar. También existen eventos **que no son OT**: llamar a un cliente, enviar una cotización → `evento` tipo `oficina`, sin OT.
+6. El historial de OT ejecutadas y las cotizaciones relacionadas se muestran en la ficha del Cliente — **se implementa en el sprint de Cotizaciones**, cuando exista la doble relación.
 
-`trabajos`, `trabajo_fotos`, `consumos` y el vínculo `cotizaciones.cliente_id` **no se crearon en el Sprint 9** — su modelado definitivo se cierra en el sprint de Cotizaciones (el último del CRM). La app móvil de instaladores (Etapa 2) puebla las OT en terreno; las OT viejas pre-sistema las carga el dueño a mano.
+`trabajos`, `trabajo_fotos`, `consumos`, `trabajos.evento_id` y el vínculo `cotizaciones.cliente_id` **no se crearon todavía** — su modelado definitivo se cierra en el sprint de Cotizaciones (el último del CRM). La app móvil de instaladores (Etapa 2) puebla las OT en terreno; las OT viejas pre-sistema las carga el dueño a mano.
 
 ### 11 quater. Sprint 9 — entidad Clientes (implementado)
 
@@ -450,3 +464,11 @@ Flujo de negocio, de principio a fin:
 - **Alta manual únicamente.** El vínculo lead→cliente (matchear por teléfono, botón «convertir en cliente») se hace en el sprint de Cotizaciones.
 - **Fuera de alcance del Sprint 9:** historial de OT/instalaciones, alerta de mantención, «cotizaciones relacionadas» — todo depende de la OT (§11 ter). El Blade deja un comentario donde irán.
 - **Tests:** `ClientesIndexTest` (7 casos) + `CrmNavegacionTest` actualizado. `php artisan test` **95 en verde**, `pint --test` verde.
+
+### 11 quinquies. Sprint 10 — Calendario / agenda interna (implementado)
+
+- **`eventos`** (SoftDeletes) — unidad de agenda genérica (ver §5 y §11 ter paso 5). `tipo` `terreno|oficina`, `estado` `agendado|hecho|cancelado`, `inicio` datetime (+ `todo_el_dia` bool que anula la hora), `cliente_id` nullable. `google_event_id` unique nullable declarado desde ya para el sync con Google (sprint posterior), sin uso. **`trabajos` no se creó** — cuando exista, la OT apuntará al evento vía `trabajos.evento_id`; hoy los eventos se crean sueltos.
+- **`App\Livewire\Admin\Calendario\CalendarioIndex`** (ruta `admin.calendario`, reemplaza el placeholder del Sprint 8): grilla mensual construida a mano (Blade + `CarbonImmutable`, lunes–domingo, `#[Url] $mes` en `Y-m`, navegación mes ± / "Hoy"; `mes` inválido en la URL se ignora). Click en un día abre el form con esa fecha; click en un evento lo edita. Panel lateral con "Agenda semanal" (semana en curso, sin cancelados) y "Agenda del mes" como el mockup. CRUD completo de eventos (`updateOrCreate`, soft delete). Botón "Conectar con Google Calendar" **visible pero deshabilitado** con nota "próximamente" — **sin librería JS de calendario** (mismo criterio que el resto del proyecto).
+- **`App\Support\FechaEsp`** — formato de fechas en español sin depender del locale (`APP_LOCALE=en`). Centraliza los nombres de meses/días; `CotizacionPdfDataBuilder` dejó de duplicar su `const MESES` privada y ahora usa `FechaEsp::largo()`.
+- **Google Calendar NO se implementó** — es su propio sprint. El esquema queda preparado (`google_event_id`).
+- **Tests:** `CalendarioIndexTest` (11 casos, con `Carbon::setTestNow`) + `FechaEspTest` (4) + `CrmNavegacionTest` actualizado. `php artisan test` **110 en verde**, `pint --test` verde.

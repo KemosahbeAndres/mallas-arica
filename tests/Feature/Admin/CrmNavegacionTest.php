@@ -14,7 +14,7 @@ class CrmNavegacionTest extends TestCase
     {
         $this->actuarComoAdmin();
 
-        foreach (['resumen', 'cotizaciones', 'calendario'] as $seccion) {
+        foreach (['resumen', 'cotizaciones'] as $seccion) {
             $this->get("/admin/{$seccion}")
                 ->assertOk()
                 ->assertSee('próximamente');
@@ -36,6 +36,16 @@ class CrmNavegacionTest extends TestCase
             ->assertOk()
             ->assertSee('Nuevo cliente')
             ->assertDontSee('próximamente');
+    }
+
+    public function test_calendario_ya_es_una_seccion_real(): void
+    {
+        $this->actuarComoAdmin();
+
+        $this->get('/admin/calendario')
+            ->assertOk()
+            ->assertSee('Agenda semanal')
+            ->assertDontSee('🚧');
     }
 
     public function test_invitado_es_redirigido_al_login_desde_una_seccion_del_crm(): void
