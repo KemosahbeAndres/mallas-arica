@@ -7,6 +7,7 @@ use App\Livewire\Admin\Galeria\GaleriaIndex;
 use App\Livewire\Admin\Leads\LeadDetalle;
 use App\Livewire\Admin\Leads\LeadsIndex;
 use App\Livewire\Admin\Proximamente;
+use App\Livewire\Admin\Resumen\ResumenIndex;
 use App\Livewire\Admin\SitioWeb\SitioWebPanel;
 use App\Livewire\Admin\Tarifas\TarifasMatriz;
 use Illuminate\Support\Facades\Auth;
@@ -18,16 +19,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest')->get('/login', Login::class)->name('login');
 
     Route::middleware('auth')->group(function () {
-        Route::get('/', fn () => redirect()->route('admin.sitio-web'));
+        Route::get('/', fn () => redirect()->route('admin.resumen'));
+
+        // Dashboard «Resumen» (Sprint 11): KPIs + agenda de la semana + últimas cotizaciones.
+        Route::get('/resumen', ResumenIndex::class)->name('resumen');
 
         // CRM «Sitio web» (Sprint 8): contenido, imágenes y FAQ editables.
         Route::get('/sitio-web', SitioWebPanel::class)->name('sitio-web');
 
-        // Chrome del CRM completo (diseño/dashboard-v1.pdf). Las secciones aún
-        // no construidas apuntan a Proximamente hasta su sprint (9+).
-        Route::get('/resumen', Proximamente::class)->name('resumen')
-            ->defaults('seccion', 'Resumen')
-            ->defaults('detalle', 'El dashboard con la actividad de la semana y las últimas cotizaciones llega en una próxima entrega.');
+        // Secciones del chrome del CRM aún no construidas → Proximamente.
         Route::get('/cotizaciones', Proximamente::class)->name('cotizaciones')
             ->defaults('seccion', 'Cotizaciones')
             ->defaults('detalle', 'El rediseño de cotizaciones con folio y estados es la última pieza del CRM. Por ahora los leads se ven en la sección Tarifas → Leads del panel anterior.');

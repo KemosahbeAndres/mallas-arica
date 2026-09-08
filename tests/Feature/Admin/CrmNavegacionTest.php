@@ -14,18 +14,28 @@ class CrmNavegacionTest extends TestCase
     {
         $this->actuarComoAdmin();
 
-        foreach (['resumen', 'cotizaciones'] as $seccion) {
+        foreach (['cotizaciones'] as $seccion) {
             $this->get("/admin/{$seccion}")
                 ->assertOk()
                 ->assertSee('próximamente');
         }
     }
 
-    public function test_la_raiz_del_admin_redirige_a_sitio_web(): void
+    public function test_la_raiz_del_admin_redirige_a_resumen(): void
     {
         $this->actuarComoAdmin();
 
-        $this->get('/admin')->assertRedirect('/admin/sitio-web');
+        $this->get('/admin')->assertRedirect('/admin/resumen');
+    }
+
+    public function test_resumen_ya_es_una_seccion_real(): void
+    {
+        $this->actuarComoAdmin();
+
+        $this->get('/admin/resumen')
+            ->assertOk()
+            ->assertSee('Ticket promedio')
+            ->assertDontSee('🚧');
     }
 
     public function test_clientes_ya_es_una_seccion_real(): void
