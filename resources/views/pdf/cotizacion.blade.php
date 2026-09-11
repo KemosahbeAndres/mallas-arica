@@ -12,6 +12,7 @@
         .logo { width: 46px; height: auto; }
         .brand-nombre { font-size: 20px; font-weight: bold; margin: 0 0 0 10px; }
         .brand-sub { font-size: 10px; color: #3A3533; margin: 2px 0 0 10px; }
+        .brand-datos { font-size: 9.5px; color: #3A3533; margin: 4px 0 0 10px; line-height: 1.5; }
         .badge {
             display: inline-block;
             background: #CA1E1E;
@@ -22,15 +23,15 @@
             padding: 6px 14px;
             border-radius: 999px;
         }
-        .numero-label { font-size: 9px; color: #3A3533; margin-top: 10px; margin-bottom: 2px; }
-        .numero { font-size: 20px; font-weight: bold; color: #CA1E1E; }
+        .numero { font-size: 16px; font-weight: bold; color: #CA1E1E; margin-top: 10px; }
         .fecha { font-size: 10px; margin-top: 4px; }
 
-        .partes { width: 100%; margin-top: 22px; border-collapse: separate; border-spacing: 0; background: #F3EAE1; border-radius: 10px; }
-        .partes td { padding: 14px 18px; vertical-align: top; width: 50%; }
+        .partes { width: 100%; margin-top: 22px; }
+        .partes td { padding: 0; vertical-align: top; text-align: right; }
         .partes-label { color: #CA1E1E; font-size: 9px; font-weight: bold; letter-spacing: 0.05em; }
-        .partes-nombre { font-weight: bold; font-size: 12px; margin-top: 3px; }
-        .partes-detalle { color: #3A3533; font-size: 10px; margin-top: 2px; line-height: 1.5; }
+        .partes-linea { font-size: 10px; margin-top: 3px; }
+        .partes-nombre { font-weight: bold; color: #211D1C; }
+        .partes-detalle { color: #3A3533; }
 
         table.items { width: 100%; border-collapse: collapse; margin-top: 22px; }
         table.items thead th {
@@ -95,15 +96,18 @@
                         <td>
                             <p class="brand-nombre">Mallas Arica Jacob</p>
                             <p class="brand-sub">Instalación de mallas de protección · Arica</p>
+                            <p class="brand-datos">
+                                RUT {{ $empresa['rut'] }} · {{ $empresa['direccion'] }}<br>
+                                {{ $empresa['telefono'] }} · {{ $empresa['email'] }}
+                            </p>
                         </td>
                     </tr>
                 </table>
-                <p class="fecha">Fecha: {{ $fecha }}</p>
             </td>
             <td style="width: 40%; text-align: right;">
                 <span class="badge">COTIZACIÓN</span>
-                <p class="numero-label">N°</p>
-                <p class="numero">{{ $folio }}</p>
+                <p class="numero">N° {{ $folio }}</p>
+                <p class="fecha">Fecha: {{ $fecha }}</p>
             </td>
         </tr>
     </table>
@@ -111,19 +115,10 @@
     <table class="partes">
         <tr>
             <td>
-                <p class="partes-label">EMPRESA</p>
-                <p class="partes-nombre">Mallas Arica Jacob</p>
-                <p class="partes-detalle">
-                    RUT {{ $empresa['rut'] }} · {{ $empresa['direccion'] }}<br>
-                    {{ $empresa['telefono'] }} · {{ $empresa['email'] }}
-                </p>
-            </td>
-            <td>
                 <p class="partes-label">CLIENTE</p>
-                <p class="partes-nombre">{{ $cliente['nombre'] }}</p>
-                <p class="partes-detalle">
-                    {{ $cliente['direccion'] }}<br>
-                    {{ $cliente['contacto'] }}
+                <p class="partes-linea">
+                    <span class="partes-nombre">{{ $cliente['nombre'] }}</span>
+                    <span class="partes-detalle">- {{ $cliente['direccion'] }} - {{ str_replace(' · ', ' - ', $cliente['contacto']) }}</span>
                 </p>
             </td>
         </tr>

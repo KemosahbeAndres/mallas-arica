@@ -81,7 +81,7 @@ class CotizacionForm extends Component
             'items' => ['array', 'min:1'],
             'items.*.descripcion' => ['required', 'string', 'max:255'],
             'items.*.precio_unitario' => ['numeric', 'min:0'],
-            'items.*.cantidad' => ['numeric', 'min:0.01'],
+            'items.*.cantidad' => ['integer', 'min:1'],
             'items.*.descuento_pct' => ['numeric', 'min:0', 'max:100'],
         ];
     }
@@ -99,6 +99,7 @@ class CotizacionForm extends Component
     public function clientesFiltrados()
     {
         return Cliente::query()
+            ->withCount('trabajos')
             ->when($this->buscarCliente !== '', function ($q) {
                 $t = '%'.$this->buscarCliente.'%';
                 $q->where(fn ($s) => $s->where('nombre', 'like', $t)->orWhere('telefono', 'like', $t));

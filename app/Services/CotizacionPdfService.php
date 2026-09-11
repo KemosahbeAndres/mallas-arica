@@ -18,7 +18,7 @@ class CotizacionPdfService
         return Pdf::loadView('pdf.cotizacion', [
             'cotizacion' => $cotizacion,
             ...$datos,
-        ])->output();
+        ])->setPaper('letter')->output();
     }
 
     public function nombreArchivo(Cotizacion $cotizacion): string

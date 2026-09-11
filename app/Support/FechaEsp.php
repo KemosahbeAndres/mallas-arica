@@ -54,4 +54,10 @@ class FechaEsp
     {
         return ucfirst(self::DIAS[$fecha->dayOfWeek]).', '.$fecha->day.' de '.self::MESES[$fecha->month];
     }
+
+    /** ej. "12 de agosto, 2026" */
+    public static function diaMesAnio(CarbonInterface $fecha): string
+    {
+        return $fecha->day.' de '.self::MESES[$fecha->month].', '.$fecha->year;
+    }
 }

@@ -9,7 +9,7 @@
 @endphp
 
 <header class="bg-ink">
-    <div class="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-3">
+    <div class="flex items-center justify-between gap-6 px-6 py-3">
         <div class="flex items-center gap-8">
             <div class="flex items-center gap-2.5">
                 <span class="relative inline-block h-6 w-6 shrink-0">

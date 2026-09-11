@@ -28,4 +28,9 @@ class FechaEspTest extends TestCase
     {
         $this->assertSame('Jueves, 3 de septiembre', FechaEsp::diaMes(Carbon::parse('2026-09-03')));
     }
+
+    public function test_dia_mes_anio(): void
+    {
+        $this->assertSame('12 de agosto, 2026', FechaEsp::diaMesAnio(Carbon::parse('2026-08-12')));
+    }
 }

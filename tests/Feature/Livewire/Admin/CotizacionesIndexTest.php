@@ -80,4 +80,46 @@ class CotizacionesIndexTest extends TestCase
 
         $this->assertSoftDeleted('cotizaciones', ['id' => $cot->id]);
     }
+
+    public function test_aceptar_abre_el_modal_de_agendar(): void
+    {
+        $cot = $this->cotizacion('generada');
+
+        Livewire::test(CotizacionesIndex::class)
+            ->call('seleccionar', $cot->id)
+            ->call('cambiarEstado', 'aceptada')
+            ->assertSet('mostrandoAgendar', true);
+    }
+
+    public function test_confirmar_agendar_crea_el_evento_de_la_ot(): void
+    {
+        $cot = $this->cotizacion('generada');
+
+        $test = Livewire::test(CotizacionesIndex::class)
+            ->call('seleccionar', $cot->id)
+            ->call('cambiarEstado', 'aceptada')
+            ->set('fechaAgendar', '2026-10-05')
+            ->set('horaAgendar', '10:30')
+            ->call('confirmarAgendar')
+            ->assertSet('mostrandoAgendar', false);
+
+        $trabajo = Trabajo::where('cotizacion_id', $cot->id)->first();
+        $this->assertNotNull($trabajo->evento_id);
+        $this->assertSame('2026-10-05 10:30', $trabajo->evento->inicio->format('Y-m-d H:i'));
+    }
+
+    public function test_reaceptar_una_ot_ya_agendada_no_reabre_el_modal(): void
+    {
+        $cot = $this->cotizacion('generada');
+
+        $test = Livewire::test(CotizacionesIndex::class)
+            ->call('seleccionar', $cot->id)
+            ->call('cambiarEstado', 'aceptada')
+            ->set('fechaAgendar', '2026-10-05')
+            ->call('confirmarAgendar');
+
+        $test->call('cambiarEstado', 'borrador')
+            ->call('cambiarEstado', 'aceptada')
+            ->assertSet('mostrandoAgendar', false);
+    }
 }
