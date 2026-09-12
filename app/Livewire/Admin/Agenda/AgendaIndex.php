@@ -16,9 +16,10 @@ use Livewire\Component;
 /**
  * Página «Agenda» — fusión de Calendario + Trabajos (antes dos secciones
  * separadas). Calendario mensual a la izquierda; a la derecha, las OT
- * aceptadas pendientes de agendar y la agenda del mes, cada una con su
- * propio scroll. El botón de Google Calendar vive en la barra de título
- * del layout (`googleCalendar` prop), no como tarjeta propia.
+ * aceptadas pendientes de agendar y la agenda del mes. La cabecera lleva
+ * "Nuevo evento" + un menú "Opciones" con "Conectar con otro calendario"
+ * (abre un modal de selección de proveedor; la integración con Google
+ * queda para un sprint posterior — ver `mostrandoConectarCalendario`).
  */
 class AgendaIndex extends Component
 {
@@ -57,6 +58,9 @@ class AgendaIndex extends Component
     public string $agendaFecha = '';
 
     public string $agendaHora = '';
+
+    // --- Modal "Conectar con otro calendario" (Opciones) ---
+    public bool $mostrandoConectarCalendario = false;
 
     public ?string $flash = null;
 
@@ -324,14 +328,24 @@ class AgendaIndex extends Component
         unset($this->eventosDelMes, $this->semanas, $this->agendaMes, $this->pendientesPorAgendar);
     }
 
+    // --- "Conectar con otro calendario" (menú Opciones) ---
+
+    public function abrirConectarCalendario(): void
+    {
+        $this->mostrandoConectarCalendario = true;
+    }
+
+    public function cerrarConectarCalendario(): void
+    {
+        $this->mostrandoConectarCalendario = false;
+    }
+
     public function render()
     {
         return view('livewire.admin.agenda.agenda-index')
             ->layout('components.layouts.admin', [
                 'title' => 'Agenda',
                 'subtitle' => 'Calendario y trabajos por agendar',
-                'googleCalendar' => true,
-                'fillHeight' => true,
             ]);
     }
 }
