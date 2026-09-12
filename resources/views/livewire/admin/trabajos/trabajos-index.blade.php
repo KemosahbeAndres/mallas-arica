@@ -8,20 +8,20 @@
     ];
 @endphp
 
-<div class="flex flex-col gap-6">
-    <div class="grid gap-6 lg:grid-cols-2">
+<div class="flex flex-col gap-4">
+    <div class="grid gap-4 lg:grid-cols-2">
         {{-- Por agendar --}}
         @if ($this->porAgendar->isNotEmpty())
-            <div class="border-line rounded-2xl border bg-white p-5 lg:col-span-2">
+            <div class="border-line rounded-lg border bg-white px-4 py-3 lg:col-span-2">
                 <div class="flex items-center gap-2">
                     <span class="bg-brand-red-ui h-2 w-2 rounded-full"></span>
                     <h2 class="text-ink text-sm font-bold tracking-tight">Por agendar</h2>
                     <span class="text-ink-soft text-xs">({{ $this->porAgendar->count() }})</span>
                 </div>
-                <div class="divide-line mt-3 divide-y">
+                <div class="divide-line mt-1 divide-y">
                     @foreach ($this->porAgendar as $t)
                         <a href="{{ route('admin.calendario') }}" wire:navigate
-                            class="hover:bg-cream-deep/60 flex items-center justify-between gap-3 py-2.5 text-sm">
+                            class="hover:bg-cream-deep/60 flex items-center justify-between gap-3 py-2 text-sm">
                             <span class="min-w-0">
                                 <span class="text-ink block truncate font-medium">{{ $t->titulo }}</span>
                                 <span class="text-ink-soft block truncate text-xs">
@@ -39,14 +39,14 @@
         @endif
 
         {{-- Hoy --}}
-        <div class="border-line rounded-2xl border-2 bg-white p-5">
+        <div class="border-line rounded-lg border-2 bg-white px-4 py-3">
             <div class="flex items-center justify-between">
-                <h2 class="text-ink text-base font-bold tracking-tight">Hoy</h2>
+                <h2 class="text-ink text-sm font-bold tracking-tight">Hoy</h2>
                 <span class="text-brand-red-ui text-xs font-semibold">{{ ucfirst(FechaEsp::diaMes(now())) }}</span>
             </div>
-            <div class="divide-line mt-3 divide-y">
+            <div class="divide-line mt-1 divide-y">
                 @forelse ($this->hoy as $t)
-                    <div class="flex items-center justify-between gap-3 py-3 text-sm">
+                    <div class="flex items-center justify-between gap-3 py-2 text-sm">
                         <span class="min-w-0">
                             <span class="text-ink block truncate font-semibold">{{ $t->titulo }}</span>
                             <span class="text-ink-soft block truncate text-xs">
@@ -70,11 +70,11 @@
         </div>
 
         {{-- Resto de la semana --}}
-        <div class="border-line rounded-2xl border bg-white p-5">
-            <h2 class="text-ink text-base font-bold tracking-tight">Resto de la semana</h2>
-            <div class="divide-line mt-3 divide-y">
+        <div class="border-line rounded-lg border bg-white px-4 py-3">
+            <h2 class="text-ink text-sm font-bold tracking-tight">Resto de la semana</h2>
+            <div class="divide-line mt-1 divide-y">
                 @forelse ($this->restoSemana as $t)
-                    <div class="flex items-center justify-between gap-3 py-3 text-sm">
+                    <div class="flex items-center justify-between gap-3 py-2 text-sm">
                         <span class="min-w-0">
                             <span class="text-ink block truncate font-medium">{{ $t->titulo }}</span>
                             <span class="text-ink-soft block truncate text-xs">
@@ -97,9 +97,9 @@
     </div>
 
     {{-- Realizados --}}
-    <div class="border-line rounded-2xl border bg-gray-50 p-5">
+    <div class="border-line rounded-lg border bg-gray-50 px-4 py-3">
         <h2 class="text-sm font-bold tracking-tight text-gray-500">Realizados</h2>
-        <div class="divide-y divide-gray-200 mt-3">
+        <div class="divide-y divide-gray-200 mt-1">
             @forelse ($this->realizados as $t)
                 <div class="flex items-center justify-between gap-3 py-2.5 text-sm text-gray-500">
                     <span class="min-w-0">

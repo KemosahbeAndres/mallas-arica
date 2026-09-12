@@ -4,15 +4,15 @@
     $mesActualStr = \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $mes.'-01')->format('Y-m');
 @endphp
 
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-4">
     @if ($flash)
-        <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-800">
             {{ $flash }}
         </div>
     @endif
 
     {{-- Barra Google Calendar (deshabilitada — sprint posterior) --}}
-    <div class="border-line flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white px-5 py-4">
+    <div class="border-line flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-4 py-3">
         <p class="text-ink-soft text-sm">No conectado a Google Calendar</p>
         <button
             type="button"
@@ -24,15 +24,15 @@
         </button>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
+    <div class="grid gap-4 lg:grid-cols-[1fr_22rem]">
         {{-- Grilla mensual --}}
-        <div class="border-line rounded-2xl border bg-white p-5">
+        <div class="border-line rounded-lg border bg-white px-4 py-3">
             <div class="flex items-center justify-between">
                 <button type="button" wire:click="mesAnterior"
                     class="border-line hover:bg-cream-deep rounded-lg border px-3 py-1.5 text-sm">‹</button>
 
                 <div class="flex items-center gap-3">
-                    <h2 class="text-ink text-base font-bold tracking-tight">{{ $this->tituloMes() }}</h2>
+                    <h2 class="text-ink text-sm font-bold tracking-tight">{{ $this->tituloMes() }}</h2>
                     @if ($mesActualStr !== now()->format('Y-m'))
                         <button type="button" wire:click="irAHoy"
                             class="text-brand-red-ui text-xs font-semibold hover:underline">Hoy</button>
@@ -43,7 +43,7 @@
                     class="border-line hover:bg-cream-deep rounded-lg border px-3 py-1.5 text-sm">›</button>
             </div>
 
-            <div class="mt-4 grid grid-cols-7 gap-1 text-center">
+            <div class="mt-3 grid grid-cols-7 gap-1 text-center">
                 @foreach (FechaEsp::DIAS_CORTOS as $dia)
                     <div class="text-ink-soft py-2 text-xs font-semibold uppercase">{{ $dia }}</div>
                 @endforeach
@@ -89,9 +89,9 @@
         </div>
 
         {{-- Agendas + formulario --}}
-        <div class="flex flex-col gap-5">
+        <div class="flex flex-col gap-4">
             @if ($mostrandoForm)
-                <div class="border-line rounded-2xl border bg-white p-5">
+                <div class="border-line rounded-lg border bg-white px-4 py-3">
                     <div class="flex items-center justify-between">
                         <h3 class="text-ink text-sm font-bold tracking-tight">
                             {{ $editandoId ? 'Editar evento' : 'Nuevo evento' }}
@@ -99,7 +99,7 @@
                         <button type="button" wire:click="cerrarForm" class="text-ink-soft text-sm hover:text-ink">✕</button>
                     </div>
 
-                    <form wire:submit="guardarEvento" class="mt-4 flex flex-col gap-3">
+                    <form wire:submit="guardarEvento" class="mt-3 flex flex-col gap-3">
                         <div>
                             <input type="text" wire:model="titulo" placeholder="Título"
                                 class="border-line focus:border-brand-red-ui focus:ring-brand-red-ui/20 w-full rounded-lg border px-3 py-2 text-sm focus:ring">
@@ -182,12 +182,12 @@
                 </button>
             @endif
 
-            <div class="border-line rounded-2xl border bg-white p-5">
+            <div class="border-line rounded-lg border bg-white px-4 py-3">
                 <h3 class="text-ink text-sm font-bold tracking-tight">Agenda semanal</h3>
-                <div class="divide-line mt-3 divide-y">
+                <div class="divide-line mt-1 divide-y">
                     @forelse ($this->agendaSemana as $ev)
                         <button type="button" wire:click="editarEvento({{ $ev->id }})"
-                            class="hover:bg-cream-deep/60 flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm">
+                            class="hover:bg-cream-deep/60 flex w-full items-center justify-between gap-3 py-2 text-left text-sm">
                             <span class="text-ink">
                                 {{ $ev->titulo }}
                                 @if ($ev->cliente)<span class="text-ink-soft">· {{ $ev->cliente->nombre }}</span>@endif
@@ -200,12 +200,12 @@
                 </div>
             </div>
 
-            <div class="border-line rounded-2xl border bg-white p-5">
+            <div class="border-line rounded-lg border bg-white px-4 py-3">
                 <h3 class="text-ink text-sm font-bold tracking-tight">Agenda del mes</h3>
-                <div class="divide-line mt-3 divide-y">
+                <div class="divide-line mt-1 divide-y">
                     @forelse ($this->agendaMes as $ev)
                         <button type="button" wire:click="editarEvento({{ $ev->id }})"
-                            class="hover:bg-cream-deep/60 flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm">
+                            class="hover:bg-cream-deep/60 flex w-full items-center justify-between gap-3 py-2 text-left text-sm">
                             <span class="text-ink">
                                 {{ $ev->titulo }}
                                 @if ($ev->cliente)<span class="text-ink-soft">· {{ $ev->cliente->nombre }}</span>@endif

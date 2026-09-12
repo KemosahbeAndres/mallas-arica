@@ -8,9 +8,9 @@
     ];
 @endphp
 
-<div class="flex flex-col gap-5">
+<div class="flex flex-col gap-4">
     @if ($flash)
-        <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-800">
             {{ $flash }}
         </div>
     @endif
@@ -29,16 +29,16 @@
         </select>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <div class="border-line overflow-hidden rounded-xl border bg-white">
+    <div class="grid gap-4 lg:grid-cols-[3fr_2fr]">
+        <div class="border-line overflow-hidden rounded-lg border bg-white">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-ink text-white">
-                        <th class="px-4 py-3 text-left font-semibold">Folio</th>
-                        <th class="px-4 py-3 text-left font-semibold">Cliente</th>
-                        <th class="px-4 py-3 text-right font-semibold">Total</th>
-                        <th class="px-4 py-3 text-left font-semibold">Fecha</th>
-                        <th class="px-4 py-3 text-left font-semibold">Estado</th>
+                        <th class="px-4 py-2 text-left font-semibold">Folio</th>
+                        <th class="px-4 py-2 text-left font-semibold">Cliente</th>
+                        <th class="px-4 py-2 text-right font-semibold">Total</th>
+                        <th class="px-4 py-2 text-left font-semibold">Fecha</th>
+                        <th class="px-4 py-2 text-left font-semibold">Estado</th>
                     </tr>
                 </thead>
                 <tbody class="divide-line divide-y">
@@ -46,31 +46,31 @@
                         <tr wire:key="cot-{{ $cot->id }}"
                             wire:click="seleccionar({{ $cot->id }})"
                             class="cursor-pointer transition-colors {{ $seleccionada === $cot->id ? 'bg-cream-deep' : 'hover:bg-cream-deep/60' }}">
-                            <td class="text-ink-soft px-4 py-3 font-mono">#{{ $cot->folio }}</td>
-                            <td class="text-ink px-4 py-3 font-medium">{{ $cot->cliente?->nombre ?? $cot->nombre ?? '—' }}</td>
-                            <td class="text-ink px-4 py-3 text-right">{{ $clp($cot->total) }}</td>
-                            <td class="text-ink-soft px-4 py-3 whitespace-nowrap">{{ \App\Support\FechaEsp::diaMesAnio($cot->created_at) }}</td>
-                            <td class="px-4 py-3">
+                            <td class="text-ink-soft px-4 py-2 font-mono">#{{ $cot->folio }}</td>
+                            <td class="text-ink px-4 py-2 font-medium">{{ $cot->cliente?->nombre ?? $cot->nombre ?? '—' }}</td>
+                            <td class="text-ink px-4 py-2 text-right">{{ $clp($cot->total) }}</td>
+                            <td class="text-ink-soft px-4 py-2 whitespace-nowrap">{{ \App\Support\FechaEsp::diaMesAnio($cot->created_at) }}</td>
+                            <td class="px-4 py-2">
                                 <span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ $badge[$cot->estado] ?? 'bg-cream-deep text-ink-soft' }}">
                                     {{ ucfirst($cot->estado) }}
                                 </span>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-ink-soft px-4 py-8 text-center">
+                        <tr><td colspan="5" class="text-ink-soft px-4 py-6 text-center">
                             {{ $estadoFiltro ? 'Sin cotizaciones en ese estado.' : 'Todavía no hay cotizaciones.' }}
                         </td></tr>
                     @endforelse
                 </tbody>
             </table>
 
-            <div class="border-line border-t px-4 py-3">
+            <div class="border-line border-t px-4 py-2.5">
                 {{ $this->cotizaciones->links() }}
             </div>
         </div>
 
         {{-- Vista previa --}}
-        <div class="border-line rounded-2xl border bg-white p-5">
+        <div class="border-line rounded-lg border bg-white px-4 py-3">
             @if ($this->detalle)
                 @php $d = $this->detalle; @endphp
                 <div class="flex items-start justify-between gap-2">
@@ -171,10 +171,10 @@
                 x-transition:enter="transition ease-out duration-200"
                 x-transition:enter-start="opacity-0 scale-95"
                 x-transition:enter-end="opacity-100 scale-100"
-                class="border-line relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border bg-white shadow-2xl"
+                class="border-line relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border bg-white shadow-2xl"
             >
                 {{-- Header --}}
-                <div class="bg-ink relative overflow-hidden px-6 py-5">
+                <div class="bg-ink relative overflow-hidden px-5 py-4">
                     <div class="bg-brand-red-ui/30 absolute -top-10 -right-10 h-32 w-32 rounded-full blur-2xl"></div>
                     <div class="relative flex items-center justify-between gap-3">
                         <div>
@@ -189,7 +189,7 @@
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto px-6 py-5">
+                <div class="flex-1 overflow-y-auto px-5 py-4">
                     <div class="grid gap-6 sm:grid-cols-[1fr_11rem]">
                         {{-- Mini calendario --}}
                         <div>
@@ -263,7 +263,7 @@
                 </div>
 
                 {{-- Footer --}}
-                <div class="border-line flex items-center justify-between gap-3 border-t bg-white px-6 py-4">
+                <div class="border-line flex items-center justify-between gap-3 border-t bg-white px-5 py-3">
                     <button type="button" wire:click="cerrarAgendar"
                         class="text-ink-soft rounded-lg px-4 py-2 text-sm font-semibold hover:bg-cream-deep">
                         Ahora no

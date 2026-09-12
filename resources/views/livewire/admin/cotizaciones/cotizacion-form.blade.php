@@ -23,13 +23,13 @@
     </div>
 
     {{-- Cliente (40%) + Cotización (60%), cada una con su propio scroll --}}
-    <div class="flex flex-col gap-6 md:flex-row md:items-start">
+    <div class="flex flex-col gap-4 md:flex-row md:items-start">
         {{-- Cliente --}}
-        <section class="border-line flex max-h-[calc(100vh-16rem)] w-full flex-col rounded-2xl border bg-white md:w-[30%]">
-            <div class="shrink-0 p-6 pb-0">
-                <h2 class="text-ink text-base font-bold tracking-tight">Cliente</h2>
+        <section class="border-line flex max-h-[calc(100vh-16rem)] w-full flex-col rounded-lg border bg-white md:w-[30%]">
+            <div class="shrink-0 p-4 pb-0">
+                <h2 class="text-ink text-sm font-bold tracking-tight">Cliente</h2>
 
-                <div class="mt-4 flex gap-2">
+                <div class="mt-3 flex gap-2">
                     <button type="button" wire:click="$set('modoCliente', 'existente')"
                         class="rounded-lg px-4 py-2 text-sm font-semibold transition-colors {{ $modoCliente === 'existente' ? 'bg-brand-red-ui text-white' : 'border-line bg-white text-ink-soft border' }}">
                         Cliente existente
@@ -41,7 +41,7 @@
                 </div>
             </div>
 
-            <div class="min-h-0 flex-1 overflow-y-auto p-6 pt-4">
+            <div class="min-h-0 flex-1 overflow-y-auto p-4 pt-3">
                 @if ($modoCliente === 'existente')
                     <input type="search" wire:model.live.debounce.300ms="buscarCliente" placeholder="Buscar por nombre o teléfono…"
                         class="border-line focus:border-brand-red-ui w-full rounded-lg border px-3 py-2 text-sm">
@@ -102,16 +102,16 @@
         </section>
 
         {{-- Ítems --}}
-        <section class="border-line flex max-h-[calc(100vh-16rem)] w-full flex-col rounded-2xl border bg-white md:flex-1">
-            <div class="flex shrink-0 items-center justify-between p-6 pb-0">
-                <h2 class="text-ink text-base font-bold tracking-tight">Ítems de la cotización</h2>
+        <section class="border-line flex max-h-[calc(100vh-16rem)] w-full flex-col rounded-lg border bg-white md:flex-1">
+            <div class="flex shrink-0 items-center justify-between p-4 pb-0">
+                <h2 class="text-ink text-sm font-bold tracking-tight">Ítems de la cotización</h2>
                 <button type="button" wire:click="agregarItem"
                     class="border-brand-red-ui/40 text-brand-red-ui hover:bg-brand-red-ui/5 rounded-lg border px-3 py-1.5 text-xs font-semibold">
                     + Agregar línea
                 </button>
             </div>
 
-            <div class="min-h-0 flex-1 overflow-y-auto p-6 pt-4">
+            <div class="min-h-0 flex-1 overflow-y-auto p-4 pt-3">
                 <div class="flex flex-col gap-2">
                     <div class="text-ink-soft hidden grid-cols-[1fr_7rem_5rem_5rem_7rem_2rem] gap-2 px-1 text-xs font-semibold uppercase sm:grid">
                         <span>Descripción</span><span class="text-right">P. unitario</span><span class="text-right">Cant.</span>
@@ -139,7 +139,7 @@
                 </div>
             </div>
 
-            <div class="border-line shrink-0 border-t p-6 pt-4">
+            <div class="border-line shrink-0 border-t p-4 pt-3">
                 <div class="flex flex-col items-end gap-1 text-sm">
                     <div class="flex w-full max-w-xs items-center justify-between">
                         <span class="text-ink-soft">Neto (líneas)</span>

@@ -1,6 +1,6 @@
-<div class="flex flex-col gap-5">
+<div class="flex flex-col gap-4">
     @if ($guardado)
-        <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-800">
             {{ $guardado }}
         </div>
     @endif
@@ -17,7 +17,7 @@
 
     <form wire:submit="guardar" class="flex flex-col gap-4">
         @forelse ($filas as $indice => $fila)
-            <div class="border-line rounded-2xl border bg-white p-5" wire:key="faq-fila-{{ $indice }}">
+            <div class="border-line rounded-lg border bg-white px-4 py-3" wire:key="faq-fila-{{ $indice }}">
                 <div class="flex items-start gap-3">
                     <span class="bg-brand-red-ui/10 text-brand-red-ui mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                         {{ $indice + 1 }}
@@ -62,7 +62,7 @@
                 </div>
             </div>
         @empty
-            <p class="text-ink-soft border-line rounded-2xl border border-dashed bg-white px-4 py-8 text-center text-sm">
+            <p class="text-ink-soft border-line rounded-lg border border-dashed bg-white px-4 py-6 text-center text-sm">
                 No hay preguntas todavía. Agrega la primera con el botón de arriba.
             </p>
         @endforelse

@@ -17,9 +17,9 @@
     ];
 @endphp
 
-<div class="border-line mt-6 rounded-2xl border bg-white p-6">
+<div class="border-line mt-4 rounded-lg border bg-white px-4 py-4">
     @if ($flash)
-        <div class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-800">
             {{ $flash }}
         </div>
     @endif
@@ -28,7 +28,7 @@
     <h3 class="text-ink-soft text-sm font-bold tracking-wide uppercase">Órdenes de trabajo</h3>
 
     @forelse ($this->otPorDireccion as $direccionId => $ots)
-        <div class="border-line mt-3 rounded-xl border">
+        <div class="border-line mt-3 rounded-lg border">
             <p class="border-line bg-cream-deep/40 border-b px-4 py-2 text-sm font-semibold text-ink">
                 📍 {{ $direccionesPorId[$direccionId]->direccion ?? 'Sin dirección asignada' }}
             </p>

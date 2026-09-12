@@ -20,15 +20,15 @@
                 <x-admin.navbar />
 
                 <div class="bg-cream-deep border-line border-b">
-                    <div class="px-6 py-6">
-                        <h1 class="text-ink text-xl font-bold tracking-tight">{{ $title ?? 'Panel' }}</h1>
+                    <div class="px-6 py-4">
+                        <h1 class="text-ink text-lg font-bold tracking-tight">{{ $title ?? 'Panel' }}</h1>
                         @if ($subtitle)
-                            <p class="text-ink-soft mt-1 text-sm">{{ $subtitle }}</p>
+                            <p class="text-ink-soft mt-0.5 text-sm">{{ $subtitle }}</p>
                         @endif
                     </div>
                 </div>
 
-                <main class="w-full flex-1 px-6 py-8">
+                <main class="w-full flex-1 px-6 py-5">
                     {{ $slot }}
                 </main>
             </div>

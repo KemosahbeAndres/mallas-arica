@@ -19,46 +19,46 @@
     $vTicket = $variacion($ticket['variacion']);
 @endphp
 
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-4">
     {{-- KPIs --}}
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="border-line rounded-2xl border bg-white p-5">
-            <p class="text-ink-soft text-sm">Cotizaciones (mes)</p>
-            <p class="text-ink mt-2 text-3xl font-extrabold tracking-tight">{{ $cotMes['valor'] }}</p>
-            <p class="mt-2 text-xs font-semibold {{ $vCot['clase'] }}">{{ $vCot['texto'] }}</p>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="border-line rounded-lg border bg-white px-4 py-3">
+            <p class="text-ink-soft text-xs">Cotizaciones (mes)</p>
+            <p class="text-ink mt-1 text-xl font-bold tracking-tight">{{ $cotMes['valor'] }}</p>
+            <p class="mt-0.5 text-xs font-medium {{ $vCot['clase'] }}">{{ $vCot['texto'] }}</p>
         </div>
 
-        <div class="border-line rounded-2xl border bg-white p-5">
-            <p class="text-ink-soft text-sm">Pendientes</p>
-            <p class="text-ink mt-2 text-3xl font-extrabold tracking-tight">{{ $this->pendientes }}</p>
-            <p class="text-ink-soft mt-2 text-xs font-semibold">Por responder</p>
+        <div class="border-line rounded-lg border bg-white px-4 py-3">
+            <p class="text-ink-soft text-xs">Pendientes</p>
+            <p class="text-ink mt-1 text-xl font-bold tracking-tight">{{ $this->pendientes }}</p>
+            <p class="text-ink-soft mt-0.5 text-xs font-medium">Por responder</p>
         </div>
 
-        <div class="border-line rounded-2xl border bg-white p-5">
-            <p class="text-ink-soft text-sm">Clientes activos</p>
-            <p class="text-ink mt-2 text-3xl font-extrabold tracking-tight">{{ $this->clientesActivos }}</p>
-            <p class="text-ink-soft mt-2 text-xs font-semibold">Con dirección registrada</p>
+        <div class="border-line rounded-lg border bg-white px-4 py-3">
+            <p class="text-ink-soft text-xs">Clientes activos</p>
+            <p class="text-ink mt-1 text-xl font-bold tracking-tight">{{ $this->clientesActivos }}</p>
+            <p class="text-ink-soft mt-0.5 text-xs font-medium">Con dirección registrada</p>
         </div>
 
-        <div class="border-line rounded-2xl border bg-white p-5">
-            <p class="text-ink-soft text-sm">Ticket promedio</p>
-            <p class="text-ink mt-2 text-3xl font-extrabold tracking-tight">{{ $clp($ticket['valor']) }}</p>
-            <p class="mt-2 text-xs font-semibold {{ $vTicket['clase'] }}">{{ $vTicket['texto'] }}</p>
+        <div class="border-line rounded-lg border bg-white px-4 py-3">
+            <p class="text-ink-soft text-xs">Ticket promedio</p>
+            <p class="text-ink mt-1 text-xl font-bold tracking-tight">{{ $clp($ticket['valor']) }}</p>
+            <p class="mt-0.5 text-xs font-medium {{ $vTicket['clase'] }}">{{ $vTicket['texto'] }}</p>
         </div>
     </div>
 
     {{-- Listados --}}
-    <div class="grid gap-6 lg:grid-cols-2">
-        <div class="border-line rounded-2xl border bg-white p-5">
+    <div class="grid gap-4 lg:grid-cols-2">
+        <div class="border-line rounded-lg border bg-white px-4 py-3">
             <div class="flex items-center justify-between">
-                <h2 class="text-ink text-base font-bold tracking-tight">Trabajos de esta semana</h2>
+                <h2 class="text-ink text-sm font-bold tracking-tight">Trabajos de esta semana</h2>
                 <a href="{{ route('admin.calendario') }}" wire:navigate
-                    class="text-brand-red-ui text-sm font-semibold hover:underline">Ver calendario →</a>
+                    class="text-brand-red-ui text-xs font-semibold hover:underline">Ver calendario →</a>
             </div>
 
-            <div class="divide-line mt-3 divide-y">
+            <div class="divide-line mt-1 divide-y">
                 @forelse ($this->trabajosSemana as $ev)
-                    <div class="flex items-center justify-between gap-3 py-3 text-sm">
+                    <div class="flex items-center justify-between gap-3 py-2 text-sm">
                         <span class="text-ink">
                             {{ $ev->titulo }}
                             @if ($ev->cliente)<span class="text-ink-soft">· {{ $ev->cliente->nombre }}</span>@endif
@@ -66,22 +66,22 @@
                         <span class="text-ink-soft shrink-0 text-xs">{{ FechaEsp::corto($ev->inicio) }}</span>
                     </div>
                 @empty
-                    <p class="text-ink-soft py-6 text-center text-sm">Sin trabajos agendados esta semana.</p>
+                    <p class="text-ink-soft py-4 text-center text-sm">Sin trabajos agendados esta semana.</p>
                 @endforelse
             </div>
         </div>
 
-        <div class="border-line rounded-2xl border bg-white p-5">
+        <div class="border-line rounded-lg border bg-white px-4 py-3">
             <div class="flex items-center justify-between">
-                <h2 class="text-ink text-base font-bold tracking-tight">Últimas cotizaciones</h2>
+                <h2 class="text-ink text-sm font-bold tracking-tight">Últimas cotizaciones</h2>
                 <a href="{{ route('admin.cotizaciones') }}" wire:navigate
-                    class="text-brand-red-ui text-sm font-semibold hover:underline">Ver todas →</a>
+                    class="text-brand-red-ui text-xs font-semibold hover:underline">Ver todas →</a>
             </div>
 
-            <div class="divide-line mt-3 divide-y">
+            <div class="divide-line mt-1 divide-y">
                 @forelse ($this->ultimasCotizaciones as $cot)
                     <a href="{{ route('admin.cotizaciones', ['seleccionada' => $cot->id]) }}" wire:navigate
-                        class="hover:bg-cream-deep/60 flex items-center justify-between gap-3 py-3 text-sm">
+                        class="hover:bg-cream-deep/60 flex items-center justify-between gap-3 py-2 text-sm">
                         <span class="text-ink font-medium">{{ $cot->cliente?->nombre ?? $cot->nombre ?? '—' }}</span>
                         <span class="text-right">
                             <span class="text-ink block font-semibold">
@@ -91,7 +91,7 @@
                         </span>
                     </a>
                 @empty
-                    <p class="text-ink-soft py-6 text-center text-sm">Todavía no hay cotizaciones.</p>
+                    <p class="text-ink-soft py-4 text-center text-sm">Todavía no hay cotizaciones.</p>
                 @endforelse
             </div>
         </div>

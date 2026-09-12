@@ -6,23 +6,23 @@
     ];
 @endphp
 
-<form wire:submit="guardar" class="flex flex-col gap-6">
+<form wire:submit="guardar" class="flex flex-col gap-4">
     @if ($guardado)
-        <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+        <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-800">
             {{ $guardado }}
         </div>
     @endif
 
     @foreach ($this->grupos as $grupo => $campos)
-        <section class="border-line rounded-2xl border bg-white p-6">
-            <h2 class="text-ink text-base font-bold tracking-tight">
+        <section class="border-line rounded-lg border bg-white px-4 py-4">
+            <h2 class="text-ink text-sm font-bold tracking-tight">
                 {{ $titulosGrupo[$grupo][0] ?? ucfirst($grupo) }}
             </h2>
             @if (isset($titulosGrupo[$grupo][1]))
                 <p class="text-ink-soft mt-1 text-sm">{{ $titulosGrupo[$grupo][1] }}</p>
             @endif
 
-            <div class="mt-5 grid gap-5 sm:grid-cols-2">
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 @foreach ($campos as $campo)
                     <div class="{{ $campo->tipo === 'textarea' ? 'sm:col-span-2' : '' }}">
                         <label for="c-{{ $campo->id }}" class="text-ink-soft block text-sm font-semibold">
