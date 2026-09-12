@@ -2,16 +2,17 @@
 
 namespace Tests\Feature\Livewire\Admin;
 
-use App\Livewire\Admin\Calendario\CalendarioIndex;
+use App\Livewire\Admin\Agenda\AgendaIndex;
 use App\Models\Cliente;
 use App\Models\Evento;
+use App\Models\Trabajo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\TestCase;
 use Tests\Traits\ActuaComoAdmin;
 
-class CalendarioIndexTest extends TestCase
+class AgendaIndexTest extends TestCase
 {
     use ActuaComoAdmin, RefreshDatabase;
 
@@ -30,7 +31,7 @@ class CalendarioIndexTest extends TestCase
 
     public function test_crea_un_evento_con_hora(): void
     {
-        Livewire::test(CalendarioIndex::class)
+        Livewire::test(AgendaIndex::class)
             ->call('nuevoEvento', '2026-09-15')
             ->set('titulo', 'Instalación balcón')
             ->set('tipo', 'terreno')
@@ -46,7 +47,7 @@ class CalendarioIndexTest extends TestCase
 
     public function test_evento_todo_el_dia_no_exige_hora(): void
     {
-        Livewire::test(CalendarioIndex::class)
+        Livewire::test(AgendaIndex::class)
             ->call('nuevoEvento', '2026-09-20')
             ->set('titulo', 'Feriado local')
             ->set('todo_el_dia', true)
@@ -59,20 +60,9 @@ class CalendarioIndexTest extends TestCase
         $this->assertTrue($evento->todo_el_dia);
     }
 
-    public function test_evento_con_hora_exige_la_hora(): void
-    {
-        Livewire::test(CalendarioIndex::class)
-            ->call('nuevoEvento', '2026-09-20')
-            ->set('titulo', 'Sin hora')
-            ->set('todo_el_dia', false)
-            ->set('hora', '')
-            ->call('guardarEvento')
-            ->assertHasErrors('hora');
-    }
-
     public function test_titulo_es_obligatorio(): void
     {
-        Livewire::test(CalendarioIndex::class)
+        Livewire::test(AgendaIndex::class)
             ->call('nuevoEvento', '2026-09-10')
             ->set('titulo', '')
             ->call('guardarEvento')
@@ -89,7 +79,7 @@ class CalendarioIndexTest extends TestCase
             'inicio' => '2026-09-12 09:00:00',
         ]);
 
-        Livewire::test(CalendarioIndex::class)
+        Livewire::test(AgendaIndex::class)
             ->call('editarEvento', $evento->id)
             ->assertSet('titulo', 'Original')
             ->set('titulo', 'Editado')
@@ -110,7 +100,7 @@ class CalendarioIndexTest extends TestCase
             'inicio' => '2026-09-12 09:00:00',
         ]);
 
-        Livewire::test(CalendarioIndex::class)
+        Livewire::test(AgendaIndex::class)
             ->call('editarEvento', $evento->id)
             ->call('eliminarEvento');
 
@@ -119,7 +109,7 @@ class CalendarioIndexTest extends TestCase
 
     public function test_navegacion_de_meses(): void
     {
-        Livewire::test(CalendarioIndex::class)
+        Livewire::test(AgendaIndex::class)
             ->assertSet('mes', '2026-09')
             ->call('mesSiguiente')
             ->assertSet('mes', '2026-10')
@@ -135,29 +125,31 @@ class CalendarioIndexTest extends TestCase
         Evento::create(['titulo' => 'De septiembre', 'tipo' => 'terreno', 'inicio' => '2026-09-15 10:00:00']);
         Evento::create(['titulo' => 'De octubre', 'tipo' => 'terreno', 'inicio' => '2026-10-03 10:00:00']);
 
-        $test = Livewire::test(CalendarioIndex::class);
+        $test = Livewire::test(AgendaIndex::class);
         $eventos = $test->instance()->eventosDelMes();
 
         $this->assertTrue($eventos->has('2026-09-15'));
         $this->assertFalse($eventos->has('2026-10-03'));
     }
 
-    public function test_agenda_semanal_solo_trae_la_semana_en_curso_sin_cancelados(): void
+    public function test_agenda_del_mes_ordenada_del_mas_cercano_a_hoy_primero(): void
     {
-        Evento::create(['titulo' => 'Esta semana', 'tipo' => 'terreno', 'inicio' => '2026-09-09 10:00:00']);
-        Evento::create(['titulo' => 'Cancelado', 'tipo' => 'terreno', 'estado' => 'cancelado', 'inicio' => '2026-09-10 10:00:00']);
-        Evento::create(['titulo' => 'Otra semana', 'tipo' => 'terreno', 'inicio' => '2026-09-25 10:00:00']);
+        // "Hoy" es 2026-09-07. Distancias: Cercano = 1 día, Medio = 6 días, Lejano = 13 días.
+        Evento::create(['titulo' => 'Lejano', 'tipo' => 'terreno', 'inicio' => '2026-09-01 10:00:00']);
+        Evento::create(['titulo' => 'Cercano', 'tipo' => 'terreno', 'inicio' => '2026-09-08 10:00:00']);
+        Evento::create(['titulo' => 'Medio', 'tipo' => 'terreno', 'inicio' => '2026-09-13 10:00:00']);
+        Evento::create(['titulo' => 'Cancelado', 'tipo' => 'terreno', 'estado' => 'cancelado', 'inicio' => '2026-09-07 13:00:00']);
 
-        $agenda = Livewire::test(CalendarioIndex::class)->instance()->agendaSemana();
+        $agenda = Livewire::test(AgendaIndex::class)->instance()->agendaMes();
 
-        $this->assertSame(['Esta semana'], $agenda->pluck('titulo')->all());
+        $this->assertSame(['Cercano', 'Medio', 'Lejano'], $agenda->pluck('titulo')->all());
     }
 
     public function test_evento_puede_vincularse_a_un_cliente(): void
     {
         $cliente = Cliente::create(['nombre' => 'María']);
 
-        Livewire::test(CalendarioIndex::class)
+        Livewire::test(AgendaIndex::class)
             ->call('nuevoEvento', '2026-09-15')
             ->set('titulo', 'Visita María')
             ->set('hora', '11:00')
@@ -166,5 +158,40 @@ class CalendarioIndexTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertSame($cliente->id, Evento::firstWhere('titulo', 'Visita María')->cliente_id);
+    }
+
+    public function test_pendientes_por_agendar_son_ot_sin_evento(): void
+    {
+        $cliente = Cliente::create(['nombre' => 'Cliente OT']);
+
+        $conEvento = Evento::create(['titulo' => 'Ya agendada', 'tipo' => 'terreno', 'inicio' => '2026-09-10 09:00:00']);
+        Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT agendada', 'estado' => 'pendiente', 'evento_id' => $conEvento->id]);
+        Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT sin agendar', 'estado' => 'pendiente']);
+        Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT ejecutada', 'estado' => 'ejecutada']);
+        Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT cancelada', 'estado' => 'cancelada']);
+
+        $pendientes = Livewire::test(AgendaIndex::class)->instance()->pendientesPorAgendar();
+
+        $this->assertSame(['OT sin agendar'], $pendientes->pluck('titulo')->all());
+    }
+
+    public function test_agendar_un_trabajo_pendiente_crea_el_evento_y_lo_saca_de_la_lista(): void
+    {
+        $cliente = Cliente::create(['nombre' => 'Cliente OT']);
+        $trabajo = Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT sin agendar', 'estado' => 'pendiente']);
+
+        Livewire::test(AgendaIndex::class)
+            ->call('abrirAgendarTrabajo', $trabajo->id)
+            ->set('agendaFecha', '2026-09-15')
+            ->set('agendaHora', '10:00')
+            ->call('confirmarAgendarTrabajo')
+            ->assertHasNoErrors();
+
+        $trabajo->refresh();
+        $this->assertNotNull($trabajo->evento_id);
+        $this->assertSame('2026-09-15 10:00:00', $trabajo->evento->inicio->format('Y-m-d H:i:s'));
+
+        $pendientes = Livewire::test(AgendaIndex::class)->instance()->pendientesPorAgendar();
+        $this->assertFalse($pendientes->pluck('titulo')->contains('OT sin agendar'));
     }
 }

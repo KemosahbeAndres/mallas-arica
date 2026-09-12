@@ -1,9 +1,11 @@
 <?php
 
-namespace App\Livewire\Admin\Calendario;
+namespace App\Livewire\Admin\Agenda;
 
 use App\Models\Cliente;
 use App\Models\Evento;
+use App\Models\Trabajo;
+use App\Services\TrabajoService;
 use App\Support\FechaEsp;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -11,13 +13,20 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
-class CalendarioIndex extends Component
+/**
+ * Página «Agenda» — fusión de Calendario + Trabajos (antes dos secciones
+ * separadas). Calendario mensual a la izquierda; a la derecha, las OT
+ * aceptadas pendientes de agendar y la agenda del mes, cada una con su
+ * propio scroll. El botón de Google Calendar vive en la barra de título
+ * del layout (`googleCalendar` prop), no como tarjeta propia.
+ */
+class AgendaIndex extends Component
 {
     /** Mes visible, formato Y-m. */
     #[Url]
     public string $mes = '';
 
-    // --- Formulario de evento (panel lateral / modal) ---
+    // --- Formulario de evento (crear/editar directo en la grilla) ---
     public bool $mostrandoForm = false;
 
     public ?int $editandoId = null;
@@ -41,6 +50,13 @@ class CalendarioIndex extends Component
     public string $ubicacion = '';
 
     public string $notas = '';
+
+    // --- Agendar una OT pendiente (usa TrabajoService::agendar) ---
+    public ?int $agendandoTrabajoId = null;
+
+    public string $agendaFecha = '';
+
+    public string $agendaHora = '';
 
     public ?string $flash = null;
 
@@ -149,27 +165,30 @@ class CalendarioIndex extends Component
         return $semanas;
     }
 
+    /** Agenda del mes visible, ordenada del más cercano a hoy primero. */
     #[Computed]
-    public function agendaSemana(): Collection
+    public function agendaMes(): Collection
     {
         $hoy = CarbonImmutable::now();
 
         return Evento::query()
             ->with('cliente:id,nombre')
             ->vigentes()
-            ->entre($hoy->startOfWeek(CarbonImmutable::MONDAY), $hoy->endOfWeek(CarbonImmutable::SUNDAY))
-            ->orderBy('inicio')
-            ->get();
+            ->entre($this->mesActual()->startOfMonth(), $this->mesActual()->endOfMonth())
+            ->get()
+            ->sortBy(fn (Evento $e) => abs($e->inicio->diffInMinutes($hoy)))
+            ->values();
     }
 
+    /** OT aceptadas (con cotización) que aún no tienen fecha de agenda asignada. */
     #[Computed]
-    public function agendaMes(): Collection
+    public function pendientesPorAgendar(): Collection
     {
-        return Evento::query()
-            ->with('cliente:id,nombre')
-            ->vigentes()
-            ->entre($this->mesActual()->startOfMonth(), $this->mesActual()->endOfMonth())
-            ->orderBy('inicio')
+        return Trabajo::query()
+            ->with(['cliente:id,nombre', 'clienteDireccion:id,direccion,etiqueta', 'cotizacion:id'])
+            ->whereNotIn('estado', ['cancelada', 'ejecutada'])
+            ->whereNull('evento_id')
+            ->orderByDesc('created_at')
             ->get();
     }
 
@@ -178,7 +197,7 @@ class CalendarioIndex extends Component
         return ucfirst(FechaEsp::mesAnio($this->mesActual()));
     }
 
-    // --- CRUD ---
+    // --- CRUD de eventos ---
 
     public function nuevoEvento(?string $fecha = null): void
     {
@@ -268,17 +287,51 @@ class CalendarioIndex extends Component
         $this->resetValidation();
     }
 
+    // --- Agendar una OT pendiente ---
+
+    public function abrirAgendarTrabajo(int $trabajoId): void
+    {
+        $this->agendandoTrabajoId = $trabajoId;
+        $this->agendaFecha = CarbonImmutable::now()->format('Y-m-d');
+        $this->agendaHora = '09:00';
+        $this->resetValidation();
+    }
+
+    public function cerrarAgendarTrabajo(): void
+    {
+        $this->reset(['agendandoTrabajoId', 'agendaFecha', 'agendaHora']);
+    }
+
+    public function confirmarAgendarTrabajo(TrabajoService $service): void
+    {
+        $this->validate([
+            'agendaFecha' => ['required', 'date'],
+            'agendaHora' => ['nullable', 'date_format:H:i'],
+        ]);
+
+        $trabajo = Trabajo::findOrFail($this->agendandoTrabajoId);
+        $evento = $service->agendar($trabajo, $this->agendaFecha, $this->agendaHora ?: null);
+
+        $this->mes = $evento->inicio->format('Y-m');
+        $this->limpiarComputadas();
+        unset($this->pendientesPorAgendar);
+        $this->flash = 'Trabajo agendado.';
+        $this->cerrarAgendarTrabajo();
+    }
+
     private function limpiarComputadas(): void
     {
-        unset($this->eventosDelMes, $this->semanas, $this->agendaSemana, $this->agendaMes);
+        unset($this->eventosDelMes, $this->semanas, $this->agendaMes, $this->pendientesPorAgendar);
     }
 
     public function render()
     {
-        return view('livewire.admin.calendario.calendario-index')
+        return view('livewire.admin.agenda.agenda-index')
             ->layout('components.layouts.admin', [
-                'title' => 'Calendario',
-                'subtitle' => 'Agenda de trabajos',
+                'title' => 'Agenda',
+                'subtitle' => 'Calendario y trabajos por agendar',
+                'googleCalendar' => true,
+                'fillHeight' => true,
             ]);
     }
 }

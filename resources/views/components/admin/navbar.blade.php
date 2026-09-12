@@ -9,8 +9,7 @@
                 ['route' => 'admin.clientes', 'label' => 'Clientes', 'pattern' => 'admin.clientes', 'params' => []],
             ],
         ],
-        ['route' => 'admin.calendario', 'label' => 'Calendario', 'pattern' => 'admin.calendario'],
-        ['route' => 'admin.trabajos', 'label' => 'Trabajos', 'pattern' => 'admin.trabajos'],
+        ['route' => 'admin.agenda', 'label' => 'Agenda', 'pattern' => 'admin.agenda'],
         [
             'label' => 'Sitio web',
             'pattern' => 'admin.sitio-web',

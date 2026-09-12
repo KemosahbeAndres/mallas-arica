@@ -37,13 +37,13 @@ class CrmNavegacionTest extends TestCase
             ->assertDontSee('próximamente');
     }
 
-    public function test_calendario_ya_es_una_seccion_real(): void
+    public function test_agenda_ya_es_una_seccion_real(): void
     {
         $this->actuarComoAdmin();
 
-        $this->get('/admin/calendario')
+        $this->get('/admin/agenda')
             ->assertOk()
-            ->assertSee('Agenda semanal')
+            ->assertSee('Por agendar')
             ->assertDontSee('🚧');
     }
 
@@ -54,16 +54,6 @@ class CrmNavegacionTest extends TestCase
         $this->get('/admin/cotizaciones')
             ->assertOk()
             ->assertSee('Nueva cotización')
-            ->assertDontSee('🚧');
-    }
-
-    public function test_trabajos_ya_es_una_seccion_real(): void
-    {
-        $this->actuarComoAdmin();
-
-        $this->get('/admin/trabajos')
-            ->assertOk()
-            ->assertSee('Resto de la semana')
             ->assertDontSee('🚧');
     }
 

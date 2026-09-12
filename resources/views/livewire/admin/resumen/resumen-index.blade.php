@@ -52,7 +52,7 @@
         <div class="border-line rounded-lg border bg-white px-4 py-3">
             <div class="flex items-center justify-between">
                 <h2 class="text-ink text-sm font-bold tracking-tight">Trabajos de esta semana</h2>
-                <a href="{{ route('admin.calendario') }}" wire:navigate
+                <a href="{{ route('admin.agenda') }}" wire:navigate
                     class="text-brand-red-ui text-xs font-semibold hover:underline">Ver calendario →</a>
             </div>
 

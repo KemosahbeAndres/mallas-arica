@@ -1,15 +1,14 @@
 <?php
 
 use App\Http\Controllers\CotizacionPdfController;
+use App\Livewire\Admin\Agenda\AgendaIndex;
 use App\Livewire\Admin\Auth\Login;
-use App\Livewire\Admin\Calendario\CalendarioIndex;
 use App\Livewire\Admin\Clientes\ClientesIndex;
 use App\Livewire\Admin\Cotizaciones\CotizacionesIndex;
 use App\Livewire\Admin\Cotizaciones\CotizacionForm;
 use App\Livewire\Admin\Galeria\GaleriaIndex;
 use App\Livewire\Admin\Resumen\ResumenIndex;
 use App\Livewire\Admin\SitioWeb\SitioWebPanel;
-use App\Livewire\Admin\Trabajos\TrabajosIndex;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -33,10 +32,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('cotizaciones.pdf');
 
         Route::get('/clientes', ClientesIndex::class)->name('clientes');
-        Route::get('/calendario', CalendarioIndex::class)->name('calendario');
 
-        // Vista «Trabajos»: OT ordenadas por fecha (hoy / resto de la semana / realizadas).
-        Route::get('/trabajos', TrabajosIndex::class)->name('trabajos');
+        // «Agenda» (fusión de Calendario + Trabajos): calendario mensual + OT
+        // pendientes de agendar + agenda del mes, en una sola página.
+        Route::get('/agenda', AgendaIndex::class)->name('agenda');
 
         // CRM «Sitio web» (Sprint 8): contenido, imágenes y FAQ editables.
         Route::get('/sitio-web', SitioWebPanel::class)->name('sitio-web');
