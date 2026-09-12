@@ -1,14 +1,39 @@
 @php
     $links = [
         ['route' => 'admin.resumen', 'label' => 'Resumen', 'pattern' => 'admin.resumen'],
-        ['route' => 'admin.cotizaciones', 'label' => 'Cotizaciones', 'pattern' => 'admin.cotizaciones'],
-        ['route' => 'admin.clientes', 'label' => 'Clientes', 'pattern' => 'admin.clientes'],
+        [
+            'label' => 'Cotizar',
+            'pattern' => 'admin.cotizaciones*|admin.clientes',
+            'children' => [
+                ['route' => 'admin.cotizaciones', 'label' => 'Cotizaciones', 'pattern' => 'admin.cotizaciones*', 'params' => []],
+                ['route' => 'admin.clientes', 'label' => 'Clientes', 'pattern' => 'admin.clientes', 'params' => []],
+            ],
+        ],
         ['route' => 'admin.calendario', 'label' => 'Calendario', 'pattern' => 'admin.calendario'],
-        ['route' => 'admin.sitio-web', 'label' => 'Sitio web', 'pattern' => 'admin.sitio-web'],
+        ['route' => 'admin.trabajos', 'label' => 'Trabajos', 'pattern' => 'admin.trabajos'],
+        [
+            'label' => 'Sitio web',
+            'pattern' => 'admin.sitio-web',
+            'children' => [
+                ['route' => 'admin.sitio-web', 'params' => ['tab' => 'contenido'], 'label' => 'Contenido', 'tab' => 'contenido'],
+                ['route' => 'admin.sitio-web', 'params' => ['tab' => 'imagenes'], 'label' => 'Imágenes', 'tab' => 'imagenes'],
+                ['route' => 'admin.sitio-web', 'params' => ['tab' => 'faq'], 'label' => 'FAQ', 'tab' => 'faq'],
+            ],
+        ],
     ];
+
+    $activo = fn (?string $pattern) => $pattern && request()->routeIs(...explode('|', $pattern));
+
+    $childActivo = function (array $child) use ($activo) {
+        if (isset($child['tab'])) {
+            return request()->routeIs('admin.sitio-web') && request()->query('tab', 'contenido') === $child['tab'];
+        }
+
+        return $activo($child['pattern']);
+    };
 @endphp
 
-<header class="bg-ink">
+<header class="bg-ink relative">
     <div class="flex items-center justify-between gap-6 px-6 py-3">
         <div class="flex items-center gap-8">
             <div class="flex items-center gap-2.5">
@@ -24,13 +49,48 @@
 
             <nav class="hidden items-center gap-1 md:flex">
                 @foreach ($links as $link)
-                    <a
-                        href="{{ route($link['route']) }}"
-                        wire:navigate
-                        class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {{ request()->routeIs($link['pattern']) ? 'bg-brand-red-ui text-white' : 'text-cream-deep/80 hover:bg-white/10 hover:text-white' }}"
-                    >
-                        {{ $link['label'] }}
-                    </a>
+                    @if (isset($link['children']))
+                        <div x-data="{ open: false }" class="relative" x-on:click.outside="open = false">
+                            <button
+                                type="button"
+                                x-on:click="open = !open"
+                                class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {{ $activo($link['pattern']) ? 'bg-brand-red-ui text-white' : 'text-cream-deep/80 hover:bg-white/10 hover:text-white' }}"
+                            >
+                                {{ $link['label'] }}
+                                <svg x-bind:class="open ? 'rotate-180' : ''" class="h-3 w-3 shrink-0 transition-transform" viewBox="0 0 12 12" fill="none">
+                                    <path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </button>
+
+                            <div
+                                x-show="open"
+                                x-cloak
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 -translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-on:click="open = false"
+                                class="border-line absolute left-0 top-full z-20 mt-1 min-w-[10rem] rounded-lg border bg-white p-1.5 shadow-lg"
+                            >
+                                @foreach ($link['children'] as $child)
+                                    <a
+                                        href="{{ route($child['route'], $child['params'] ?? []) }}"
+                                        wire:navigate
+                                        class="block rounded-md px-3 py-2 text-sm font-medium transition-colors {{ $childActivo($child) ? 'bg-brand-red-ui/10 text-brand-red-ui' : 'text-ink-soft hover:bg-cream-deep' }}"
+                                    >
+                                        {{ $child['label'] }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @else
+                        <a
+                            href="{{ route($link['route']) }}"
+                            wire:navigate
+                            class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {{ $activo($link['pattern']) ? 'bg-brand-red-ui text-white' : 'text-cream-deep/80 hover:bg-white/10 hover:text-white' }}"
+                        >
+                            {{ $link['label'] }}
+                        </a>
+                    @endif
                 @endforeach
             </nav>
         </div>
@@ -61,16 +121,28 @@
         </div>
     </div>
 
-    {{-- Nav móvil --}}
+    {{-- Nav móvil: los grupos se aplanan (sin dropdown, todo en línea con scroll horizontal) --}}
     <nav class="flex items-center gap-1 overflow-x-auto border-t border-white/10 px-4 py-2 md:hidden">
         @foreach ($links as $link)
-            <a
-                href="{{ route($link['route']) }}"
-                wire:navigate
-                class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {{ request()->routeIs($link['pattern']) ? 'bg-brand-red-ui text-white' : 'text-cream-deep/80 hover:bg-white/10' }}"
-            >
-                {{ $link['label'] }}
-            </a>
+            @if (isset($link['children']))
+                @foreach ($link['children'] as $child)
+                    <a
+                        href="{{ route($child['route'], $child['params'] ?? []) }}"
+                        wire:navigate
+                        class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {{ $childActivo($child) ? 'bg-brand-red-ui text-white' : 'text-cream-deep/80 hover:bg-white/10' }}"
+                    >
+                        {{ $child['label'] }}
+                    </a>
+                @endforeach
+            @else
+                <a
+                    href="{{ route($link['route']) }}"
+                    wire:navigate
+                    class="shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors {{ $activo($link['pattern']) ? 'bg-brand-red-ui text-white' : 'text-cream-deep/80 hover:bg-white/10' }}"
+                >
+                    {{ $link['label'] }}
+                </a>
+            @endif
         @endforeach
     </nav>
 </header>

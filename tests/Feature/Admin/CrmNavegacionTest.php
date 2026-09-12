@@ -57,6 +57,16 @@ class CrmNavegacionTest extends TestCase
             ->assertDontSee('🚧');
     }
 
+    public function test_trabajos_ya_es_una_seccion_real(): void
+    {
+        $this->actuarComoAdmin();
+
+        $this->get('/admin/trabajos')
+            ->assertOk()
+            ->assertSee('Resto de la semana')
+            ->assertDontSee('🚧');
+    }
+
     public function test_invitado_es_redirigido_al_login_desde_una_seccion_del_crm(): void
     {
         $this->get('/admin/clientes')->assertRedirect('/admin/login');
