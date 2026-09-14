@@ -11,14 +11,14 @@
     </div>
 
     @if ($mostrandoFormulario)
-        <div class="mt-4 rounded-xl border border-line bg-white p-5">
+        <div class="mt-3 rounded-lg border border-line bg-white p-4">
             @livewire('admin.galeria.galeria-form', ['editandoId' => $editandoId], key('galeria-form-'.($editandoId ?? 'nuevo')))
         </div>
     @endif
 
-    <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+    <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         @forelse ($this->items as $item)
-            <div class="rounded-xl border border-line bg-white p-3" wire:key="item-{{ $item->id }}">
+            <div class="rounded-lg border border-line bg-white p-2.5" wire:key="item-{{ $item->id }}">
                 <img src="{{ $item->url }}" alt="{{ $item->titulo }}" class="aspect-square w-full rounded-lg object-cover">
                 <p class="mt-2 truncate text-sm font-medium text-ink">{{ $item->titulo }}</p>
                 <p class="text-xs text-ink-soft">{{ $item->publicado ? 'Publicado' : 'Oculto' }}</p>

@@ -16,16 +16,6 @@
         </div>
 
         <div>
-            <label for="tipoEspacioId" class="block text-sm font-medium text-ink">Tipo de espacio</label>
-            <select id="tipoEspacioId" wire:model="tipoEspacioId" class="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm">
-                <option value="">Sin especificar</option>
-                @foreach ($tiposEspacio as $tipoEspacio)
-                    <option value="{{ $tipoEspacio->id }}">{{ $tipoEspacio->nombre }}</option>
-                @endforeach
-            </select>
-        </div>
-
-        <div>
             <label for="foto" class="block text-sm font-medium text-ink">Foto</label>
             <input type="file" id="foto" wire:model="foto" class="mt-1 w-full text-sm">
             @error('foto') <p class="mt-1 text-sm text-brand-red-dark">{{ $message }}</p> @enderror

@@ -13,42 +13,31 @@ class CotizacionItem extends Model
 
     protected $fillable = [
         'cotizacion_id',
-        'tipo_espacio_id',
-        'tipo_malla_id',
-        'tramo_altura_id',
-        'metros_lineales',
-        'precio_ml_min_snapshot',
-        'precio_ml_max_snapshot',
-        'multiplicador_snapshot',
-        'subtotal_min',
-        'subtotal_max',
+        'descripcion',
+        'precio_unitario',
+        'cantidad',
+        'descuento_pct',
+        'subtotal',
     ];
 
     protected function casts(): array
     {
         return [
-            'metros_lineales' => 'decimal:2',
-            'multiplicador_snapshot' => 'decimal:2',
+            'cantidad' => 'decimal:2',
+            'descuento_pct' => 'decimal:2',
         ];
+    }
+
+    /** Subtotal de la línea: precio × cantidad, menos el descuento de línea. */
+    public static function calcularSubtotal(int $precioUnitario, float $cantidad, float $descuentoPct): int
+    {
+        $bruto = $precioUnitario * $cantidad;
+
+        return (int) round($bruto * (1 - ($descuentoPct / 100)));
     }
 
     public function cotizacion(): BelongsTo
     {
         return $this->belongsTo(Cotizacion::class);
-    }
-
-    public function tipoEspacio(): BelongsTo
-    {
-        return $this->belongsTo(TipoEspacio::class);
-    }
-
-    public function tipoMalla(): BelongsTo
-    {
-        return $this->belongsTo(TipoMalla::class);
-    }
-
-    public function tramoAltura(): BelongsTo
-    {
-        return $this->belongsTo(TramoAltura::class);
     }
 }

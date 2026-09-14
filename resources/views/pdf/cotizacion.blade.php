@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>Cotización N° {{ $numero }}</title>
+    <title>Cotización N° {{ $folio }}</title>
     <style>
         @page { margin: 36px 40px; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #211D1C; }
@@ -12,6 +12,7 @@
         .logo { width: 46px; height: auto; }
         .brand-nombre { font-size: 20px; font-weight: bold; margin: 0 0 0 10px; }
         .brand-sub { font-size: 10px; color: #3A3533; margin: 2px 0 0 10px; }
+        .brand-datos { font-size: 9.5px; color: #3A3533; margin: 4px 0 0 10px; line-height: 1.5; }
         .badge {
             display: inline-block;
             background: #CA1E1E;
@@ -22,15 +23,15 @@
             padding: 6px 14px;
             border-radius: 999px;
         }
-        .numero-label { font-size: 9px; color: #3A3533; margin-top: 10px; margin-bottom: 2px; }
-        .numero { font-size: 20px; font-weight: bold; color: #CA1E1E; }
+        .numero { font-size: 16px; font-weight: bold; color: #CA1E1E; margin-top: 10px; }
         .fecha { font-size: 10px; margin-top: 4px; }
 
-        .partes { width: 100%; margin-top: 22px; border-collapse: separate; border-spacing: 0; background: #F3EAE1; border-radius: 10px; }
-        .partes td { padding: 14px 18px; vertical-align: top; width: 50%; }
+        .partes { width: 100%; margin-top: 22px; }
+        .partes td { padding: 0; vertical-align: top; text-align: right; }
         .partes-label { color: #CA1E1E; font-size: 9px; font-weight: bold; letter-spacing: 0.05em; }
-        .partes-nombre { font-weight: bold; font-size: 12px; margin-top: 3px; }
-        .partes-detalle { color: #3A3533; font-size: 10px; margin-top: 2px; line-height: 1.5; }
+        .partes-linea { font-size: 10px; margin-top: 3px; }
+        .partes-nombre { font-weight: bold; color: #211D1C; }
+        .partes-detalle { color: #3A3533; }
 
         table.items { width: 100%; border-collapse: collapse; margin-top: 22px; }
         table.items thead th {
@@ -50,7 +51,6 @@
         }
         table.items tbody td.num { text-align: right; white-space: nowrap; }
         table.items tbody td.subtotal { font-weight: bold; }
-        .pendiente { color: #3A3533; font-style: italic; }
 
         table.totales { width: 100%; margin-top: 16px; }
         table.totales td { padding: 3px 0; font-size: 11px; }
@@ -96,15 +96,18 @@
                         <td>
                             <p class="brand-nombre">Mallas Arica Jacob</p>
                             <p class="brand-sub">Instalación de mallas de protección · Arica</p>
+                            <p class="brand-datos">
+                                RUT {{ $empresa['rut'] }} · {{ $empresa['direccion'] }}<br>
+                                {{ $empresa['telefono'] }} · {{ $empresa['email'] }}
+                            </p>
                         </td>
                     </tr>
                 </table>
-                <p class="fecha">Fecha: {{ $fecha }}</p>
             </td>
             <td style="width: 40%; text-align: right;">
                 <span class="badge">COTIZACIÓN</span>
-                <p class="numero-label">N°</p>
-                <p class="numero">{{ $numero }}</p>
+                <p class="numero">N° {{ $folio }}</p>
+                <p class="fecha">Fecha: {{ $fecha }}</p>
             </td>
         </tr>
     </table>
@@ -112,19 +115,10 @@
     <table class="partes">
         <tr>
             <td>
-                <p class="partes-label">EMPRESA</p>
-                <p class="partes-nombre">Mallas Arica Jacob</p>
-                <p class="partes-detalle">
-                    RUT {{ $empresa['rut'] }} · {{ $empresa['direccion'] }}<br>
-                    {{ $empresa['telefono'] }} · {{ $empresa['email'] }}
-                </p>
-            </td>
-            <td>
                 <p class="partes-label">CLIENTE</p>
-                <p class="partes-nombre">{{ $cotizacion->nombre }}</p>
-                <p class="partes-detalle">
-                    {{ $cotizacion->direccion ?: 'Arica' }}<br>
-                    {{ $cotizacion->telefono }}{{ $cotizacion->email ? ' · '.$cotizacion->email : '' }}
+                <p class="partes-linea">
+                    <span class="partes-nombre">{{ $cliente['nombre'] }}</span>
+                    <span class="partes-detalle">- {{ $cliente['direccion'] }} - {{ str_replace(' · ', ' - ', $cliente['contacto']) }}</span>
                 </p>
             </td>
         </tr>
@@ -136,6 +130,7 @@
                 <th>Descripción</th>
                 <th class="num">P. unitario</th>
                 <th class="num">Cant.</th>
+                <th class="num">Desc.</th>
                 <th class="num">Subtotal</th>
             </tr>
         </thead>
@@ -143,19 +138,22 @@
             @foreach ($lineas as $linea)
                 <tr>
                     <td>{{ $linea['descripcion'] }}</td>
-                    @if ($linea['pendiente'])
-                        <td class="num" colspan="3"><span class="pendiente">A confirmar en visita técnica</span></td>
-                    @else
-                        <td class="num">${{ number_format($linea['precioUnitario'], 0, ',', '.') }}</td>
-                        <td class="num">{{ number_format($linea['cantidad'], 1, ',', '.') }}</td>
-                        <td class="num subtotal">${{ number_format($linea['subtotal'], 0, ',', '.') }}</td>
-                    @endif
+                    <td class="num">${{ number_format($linea['precioUnitario'], 0, ',', '.') }}</td>
+                    <td class="num">{{ rtrim(rtrim(number_format($linea['cantidad'], 2, ',', '.'), '0'), ',') }}</td>
+                    <td class="num">{{ $linea['descuentoPct'] > 0 ? number_format($linea['descuentoPct'], 0).'%' : '—' }}</td>
+                    <td class="num subtotal">${{ number_format($linea['subtotal'], 0, ',', '.') }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
     <table class="totales">
+        @if ($descuentoPct > 0)
+            <tr>
+                <td class="label">Descuento sobre neto ({{ number_format($descuentoPct, 0) }}%)</td>
+                <td class="valor">incluido</td>
+            </tr>
+        @endif
         <tr>
             <td class="label">Neto</td>
             <td class="valor">${{ number_format($neto, 0, ',', '.') }}</td>
@@ -178,8 +176,7 @@
     </table>
 
     <div class="vigencia">
-        Esta cotización tiene una <strong>vigencia de 10 días</strong> a contar de la fecha de emisión.
-        Los valores están expresados en pesos chilenos (CLP) e incluyen IVA según se detalla.
+        {{ $mensajeVigencia }}
     </div>
 
     <p class="footer">

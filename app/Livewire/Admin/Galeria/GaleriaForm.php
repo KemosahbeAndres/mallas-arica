@@ -3,7 +3,6 @@
 namespace App\Livewire\Admin\Galeria;
 
 use App\Models\GaleriaItem;
-use App\Models\TipoEspacio;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -18,8 +17,6 @@ class GaleriaForm extends Component
     public $foto;
 
     public string $titulo = '';
-
-    public ?int $tipoEspacioId = null;
 
     public bool $publicado = true;
 
@@ -37,11 +34,9 @@ class GaleriaForm extends Component
         if ($editandoId) {
             $item = GaleriaItem::findOrFail($editandoId);
             $this->titulo = $item->titulo;
-            $this->tipoEspacioId = $item->tipo_espacio_id;
             $this->publicado = $item->publicado;
         } else {
             $this->titulo = '';
-            $this->tipoEspacioId = null;
             $this->publicado = true;
         }
     }
@@ -52,7 +47,6 @@ class GaleriaForm extends Component
 
         $this->validate([
             'titulo' => ['required', 'string', 'max:255'],
-            'tipoEspacioId' => ['nullable', 'exists:tipos_espacio,id'],
             'foto' => [$item ? 'nullable' : 'required', 'image', 'max:4096'],
         ]);
 
@@ -70,7 +64,6 @@ class GaleriaForm extends Component
             [
                 'foto_path' => $path,
                 'titulo' => $this->titulo,
-                'tipo_espacio_id' => $this->tipoEspacioId,
                 'publicado' => $this->publicado,
                 'orden' => $item?->orden ?? ((GaleriaItem::max('orden') ?? 0) + 1),
             ],
@@ -81,8 +74,6 @@ class GaleriaForm extends Component
 
     public function render()
     {
-        return view('livewire.admin.galeria.galeria-form', [
-            'tiposEspacio' => TipoEspacio::query()->orderBy('orden')->get(),
-        ]);
+        return view('livewire.admin.galeria.galeria-form');
     }
 }

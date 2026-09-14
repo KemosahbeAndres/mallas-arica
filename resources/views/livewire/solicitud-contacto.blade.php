@@ -12,14 +12,13 @@
 
         <div class="border-line mt-10 overflow-hidden rounded-3xl border bg-white shadow-sm lg:grid lg:grid-cols-2">
             <div class="p-6 lg:p-10">
-                @if ($numeroGenerado)
+                @if ($enviado)
                     <div class="border-brand-red-ui/30 bg-brand-red-ui/5 rounded-2xl border p-6">
                         <p class="text-ink font-semibold">
-                            ¡Listo! Tu solicitud quedó guardada con el N°
-                            <span class="text-brand-red-ui">{{ $numeroGenerado }}</span>.
+                            ¡Listo! Recibimos tus datos.
                         </p>
                         <p class="text-ink-soft mt-1 text-sm">
-                            Te contactaremos pronto para coordinar la visita. Si prefieres, también puedes
+                            Te contactaremos pronto para coordinar la visita técnica. Si prefieres, también puedes
                             <a href="https://wa.me/56986455205" target="_blank" rel="noopener" class="text-brand-red-ui font-semibold underline">
                                 escribirnos por WhatsApp
                             </a>.

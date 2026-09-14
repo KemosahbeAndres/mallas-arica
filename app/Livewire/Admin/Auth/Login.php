@@ -43,7 +43,7 @@ class Login extends Component
         RateLimiter::clear($throttleKey);
         session()->regenerate();
 
-        $this->redirect(route('admin.tarifas'), navigate: false);
+        $this->redirect(route('admin.resumen'), navigate: false);
     }
 
     public function render()

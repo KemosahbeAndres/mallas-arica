@@ -116,16 +116,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Store de tarifas
+    | Store de contenido del sitio
     |--------------------------------------------------------------------------
     |
-    | Store usado por TarifaCacheService (CLAUDE.md §4.4). Separado del
-    | 'default' porque el .env de desarrollo usa CACHE_STORE=database, y las
-    | tarifas deben cachearse en Redis según lo documentado. En tests se
-    | fuerza a 'array' vía CACHE_TARIFAS_STORE.
+    | Store usado por SiteContentService (CLAUDE.md §11, Sprint 8) para cachear
+    | el contenido editable de la landing y las FAQ. Separado del 'default'
+    | porque el .env de desarrollo usa CACHE_STORE=database y este debe ir a
+    | Redis en prod; en tests se fuerza a 'array' vía CACHE_SITE_CONTENT_STORE.
     |
     */
 
-    'tarifas_store' => env('CACHE_TARIFAS_STORE', 'redis'),
+    'site_content_store' => env('CACHE_SITE_CONTENT_STORE', 'redis'),
 
 ];

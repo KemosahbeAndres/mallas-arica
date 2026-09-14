@@ -1,34 +1,5 @@
 @php
-    $preguntas = [
-        [
-            'pregunta' => '¿Cuánto cuesta la instalación en una ventana o balcón?',
-            'respuesta' => 'Cotizamos por metro lineal, y el valor varía según la altura del espacio y si es ventana o balcón. Completa el formulario de esta página para coordinar una visita técnica gratuita y te entregamos una cotización exacta según tu medida.',
-        ],
-        [
-            'pregunta' => '¿Tienen distintos tipos de malla?',
-            'respuesta' => 'Sí, contamos con malla estándar transparente y una malla reforzada especial para mascotas, con rombo más pequeño para evitar que perros y gatos saquen la cabeza.',
-        ],
-        [
-            'pregunta' => '¿Cómo puedo pedir una cotización?',
-            'respuesta' => 'Puedes completar el formulario en esta página, escribirnos por WhatsApp o llamarnos directamente. Coordinamos una visita técnica gratuita para confirmar la medida exacta.',
-        ],
-        [
-            'pregunta' => '¿Cuánto se demoran en hacer el trabajo?',
-            'respuesta' => 'La visita técnica para cotizar y la instalación son dos citas distintas: primero medimos y te confirmamos el precio, y luego agendamos un día y hora aparte para instalar. La instalación es rápida y llegamos puntuales a la hora acordada — si algo cambia, siempre te avisamos.',
-        ],
-        [
-            'pregunta' => '¿El material es seguro?',
-            'respuesta' => 'Sí, trabajamos con malla de monofilamento de poliamida certificada por el fabricante, con resistencia comprobada de más de 200 kg/m² y filtro UV.',
-        ],
-        [
-            'pregunta' => '¿Qué medios de pago aceptan?',
-            'respuesta' => 'Aceptamos efectivo, transferencia bancaria y tarjetas de débito y crédito (hasta 3 cuotas), directamente en terreno al finalizar la instalación.',
-        ],
-        [
-            'pregunta' => '¿Dónde puedo obtener más información?',
-            'respuesta' => 'Escríbenos por WhatsApp al +56 9 8645 5205, por correo a contacto@mallasarica.cl o ventas@mallasarica.cl, o visítanos en Av. Diego Portales #1333, Arica.',
-        ],
-    ];
+    $preguntas = app(\App\Services\SiteContentService::class)->faqs();
 @endphp
 
 <section id="faq" class="scroll-mt-24 bg-cream">
@@ -41,7 +12,7 @@
         </div>
 
         <div class="mt-12 flex flex-col gap-4">
-            @foreach ($preguntas as $index => $item)
+            @foreach ($preguntas as $item)
                 <div x-data="{ open: false }" class="border-line overflow-hidden rounded-2xl border bg-white">
                     <button
                         type="button"
@@ -49,7 +20,7 @@
                         class="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
                         :aria-expanded="open"
                     >
-                        <span class="text-ink font-semibold">{{ $item['pregunta'] }}</span>
+                        <span class="text-ink font-semibold">{{ $item->pregunta }}</span>
                         <span
                             class="text-brand-red-ui shrink-0 text-xl transition-transform"
                             :class="{ 'rotate-45': open }"
@@ -61,25 +32,27 @@
                         x-transition
                         class="px-6 pb-5"
                     >
-                        <p class="text-ink-soft text-sm leading-relaxed">{{ $item['respuesta'] }}</p>
+                        <p class="text-ink-soft text-sm leading-relaxed">{{ $item->respuesta }}</p>
                     </div>
                 </div>
             @endforeach
         </div>
     </div>
 
-    <script type="application/ld+json">
-        {!! json_encode([
-            '@context' => 'https://schema.org',
-            '@type' => 'FAQPage',
-            'mainEntity' => collect($preguntas)->map(fn ($item) => [
-                '@type' => 'Question',
-                'name' => $item['pregunta'],
-                'acceptedAnswer' => [
-                    '@type' => 'Answer',
-                    'text' => $item['respuesta'],
-                ],
-            ])->all(),
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
-    </script>
+    @if ($preguntas->isNotEmpty())
+        <script type="application/ld+json">
+            {!! json_encode([
+                '@context' => 'https://schema.org',
+                '@type' => 'FAQPage',
+                'mainEntity' => $preguntas->map(fn ($item) => [
+                    '@type' => 'Question',
+                    'name' => $item->pregunta,
+                    'acceptedAnswer' => [
+                        '@type' => 'Answer',
+                        'text' => $item->respuesta,
+                    ],
+                ])->all(),
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+        </script>
+    @endif
 </section>

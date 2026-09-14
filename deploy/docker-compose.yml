@@ -59,13 +59,26 @@ services:
       # elegir la IP de `backend` y devolver 502 intermitente.
       - "traefik.docker.network=proxy"
 
-      # --- Router HTTPS ---
+      # --- Router HTTPS (dominio canónico, sin www) ---
       - "traefik.http.routers.mallas-arica.rule=Host(`${APP_DOMAIN}`)"
       - "traefik.http.routers.mallas-arica.entrypoints=websecure"
       - "traefik.http.routers.mallas-arica.tls=true"
       - "traefik.http.routers.mallas-arica.tls.certresolver=myle"
       - "traefik.http.routers.mallas-arica.service=mallas-arica"
       - "traefik.http.routers.mallas-arica.middlewares=mallas-arica-headers"
+
+      # --- Router HTTPS www → redirect 301 al dominio canónico ---
+      # Sin esto, www.${APP_DOMAIN} no matchea ningún router (404) y el
+      # certresolver nunca emite certificado para ese host (SSL inválido).
+      - "traefik.http.routers.mallas-arica-www.rule=Host(`www.${APP_DOMAIN}`)"
+      - "traefik.http.routers.mallas-arica-www.entrypoints=websecure"
+      - "traefik.http.routers.mallas-arica-www.tls=true"
+      - "traefik.http.routers.mallas-arica-www.tls.certresolver=myle"
+      - "traefik.http.routers.mallas-arica-www.service=mallas-arica"
+      - "traefik.http.routers.mallas-arica-www.middlewares=mallas-arica-www-redirect"
+      - "traefik.http.middlewares.mallas-arica-www-redirect.redirectregex.regex=^https://www\\.(.+)"
+      - "traefik.http.middlewares.mallas-arica-www-redirect.redirectregex.replacement=https://$${1}"
+      - "traefik.http.middlewares.mallas-arica-www-redirect.redirectregex.permanent=true"
 
       # --- Cabeceras de seguridad ---
       # NO añadir stsPreload hasta estar en el dominio definitivo.
