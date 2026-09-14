@@ -3,8 +3,8 @@
         [
             'grosor' => '0,80 mm',
             'rombo' => 'Rombo 5×5 cm',
-            'destacado' => '$25.000 por m²',
-            'nota' => 'Valor de referencia',
+            'destacado' => 'Soporta 200 kg/m²',
+            'nota' => 'Valor según visita técnica',
         ],
         [
             'grosor' => '0,90 mm',
@@ -42,7 +42,7 @@
                 Elige el espesor según tu necesidad
             </h2>
             <p class="text-ink-soft mt-4 text-lg">
-                Trabajamos con distintos espesores de malla de poliamida transparente. Cada espesor tiene su propio valor.
+                Trabajamos con distintos espesores de malla de poliamida transparente. El valor se cotiza en la visita técnica según tu proyecto.
             </p>
         </div>
 
@@ -55,6 +55,13 @@
                     <p class="text-ink-soft mt-1 text-xs">{{ $espesor['nota'] }}</p>
                 </div>
             @endforeach
+        </div>
+
+        <div class="mt-12 max-w-2xl">
+            <p class="text-brand-red-ui text-sm font-bold tracking-wide uppercase">Sistema de anclaje</p>
+            <h3 class="text-ink mt-2 text-2xl font-extrabold tracking-[-0.02em]">
+                Cómo se sujeta la malla a tu instalación
+            </h3>
         </div>
 
         <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">

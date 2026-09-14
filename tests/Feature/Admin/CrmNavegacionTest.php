@@ -14,14 +14,14 @@ class CrmNavegacionTest extends TestCase
     {
         $this->actuarComoAdmin();
 
-        $this->get('/admin')->assertRedirect('/admin/resumen');
+        $this->getAdmin('/admin')->assertRedirect(route('admin.resumen'));
     }
 
     public function test_resumen_ya_es_una_seccion_real(): void
     {
         $this->actuarComoAdmin();
 
-        $this->get('/admin/resumen')
+        $this->getAdmin('/admin/resumen')
             ->assertOk()
             ->assertSee('Ticket promedio')
             ->assertDontSee('🚧');
@@ -31,7 +31,7 @@ class CrmNavegacionTest extends TestCase
     {
         $this->actuarComoAdmin();
 
-        $this->get('/admin/clientes')
+        $this->getAdmin('/admin/clientes')
             ->assertOk()
             ->assertSee('Nuevo cliente')
             ->assertDontSee('próximamente');
@@ -41,7 +41,7 @@ class CrmNavegacionTest extends TestCase
     {
         $this->actuarComoAdmin();
 
-        $this->get('/admin/agenda')
+        $this->getAdmin('/admin/agenda')
             ->assertOk()
             ->assertSee('Por agendar')
             ->assertDontSee('🚧');
@@ -51,7 +51,7 @@ class CrmNavegacionTest extends TestCase
     {
         $this->actuarComoAdmin();
 
-        $this->get('/admin/cotizaciones')
+        $this->getAdmin('/admin/cotizaciones')
             ->assertOk()
             ->assertSee('Nueva cotización')
             ->assertDontSee('🚧');
@@ -59,6 +59,6 @@ class CrmNavegacionTest extends TestCase
 
     public function test_invitado_es_redirigido_al_login_desde_una_seccion_del_crm(): void
     {
-        $this->get('/admin/clientes')->assertRedirect('/admin/login');
+        $this->getAdmin('/admin/clientes')->assertRedirect(route('admin.login'));
     }
 }

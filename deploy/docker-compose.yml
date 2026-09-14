@@ -80,6 +80,16 @@ services:
       - "traefik.http.middlewares.mallas-arica-www-redirect.redirectregex.replacement=https://$${1}"
       - "traefik.http.middlewares.mallas-arica-www-redirect.redirectregex.permanent=true"
 
+      # --- Router HTTPS admin (panel, aislado en su propio subdominio) ---
+      # Mismo contenedor y servicio: Route::domain() en routes/web.php separa
+      # el panel admin del sitio público según el Host de la petición.
+      - "traefik.http.routers.mallas-arica-admin.rule=Host(`admin.${APP_DOMAIN}`)"
+      - "traefik.http.routers.mallas-arica-admin.entrypoints=websecure"
+      - "traefik.http.routers.mallas-arica-admin.tls=true"
+      - "traefik.http.routers.mallas-arica-admin.tls.certresolver=myle"
+      - "traefik.http.routers.mallas-arica-admin.service=mallas-arica"
+      - "traefik.http.routers.mallas-arica-admin.middlewares=mallas-arica-headers"
+
       # --- Cabeceras de seguridad ---
       # NO añadir stsPreload hasta estar en el dominio definitivo.
       - "traefik.http.middlewares.mallas-arica-headers.headers.stsSeconds=31536000"
