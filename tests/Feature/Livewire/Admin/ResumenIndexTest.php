@@ -37,7 +37,6 @@ class ResumenIndexTest extends TestCase
         $cotizacion = Cotizacion::create(array_merge([
             'nombre' => 'Cliente X',
             'telefono' => '+56900000000',
-            'canal' => 'web',
             'estado' => 'borrador',
             'total_max' => 0,
         ], $attrs));
@@ -79,8 +78,8 @@ class ResumenIndexTest extends TestCase
     {
         $this->cotizacion(['estado' => 'borrador']);
         $this->cotizacion(['estado' => 'borrador']);
-        $this->cotizacion(['estado' => 'contactado']);
-        $this->cotizacion(['estado' => 'cerrado']);
+        $this->cotizacion(['estado' => 'generada']);
+        $this->cotizacion(['estado' => 'aceptada']);
 
         Livewire::test(ResumenIndex::class)->assertSet('pendientes', 2);
     }
