@@ -56,6 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Domain
+    |--------------------------------------------------------------------------
+    |
+    | Dominio base del sitio público (sin protocolo, sin subdominio), usado
+    | por Route::domain() para separar el panel admin en admin.{APP_DOMAIN}.
+    | En prod: mallasarica.cl. En dev/staging: mallas.tinorte.cl. En local:
+    | localhost (admin queda en admin.localhost).
+    |
+    */
+
+    'domain' => env('APP_DOMAIN', 'localhost'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

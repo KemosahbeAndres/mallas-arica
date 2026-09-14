@@ -11,16 +11,16 @@ class AdminAccessTest extends TestCase
 
     public function test_invitado_es_redirigido_al_login_desde_cotizaciones(): void
     {
-        $this->get('/admin/cotizaciones')->assertRedirect('/admin/login');
+        $this->getAdmin('/admin/cotizaciones')->assertRedirect(route('admin.login'));
     }
 
     public function test_invitado_es_redirigido_al_login_desde_clientes(): void
     {
-        $this->get('/admin/clientes')->assertRedirect('/admin/login');
+        $this->getAdmin('/admin/clientes')->assertRedirect(route('admin.login'));
     }
 
     public function test_invitado_es_redirigido_al_login_desde_galeria(): void
     {
-        $this->get('/admin/galeria')->assertRedirect('/admin/login');
+        $this->getAdmin('/admin/galeria')->assertRedirect(route('admin.login'));
     }
 }

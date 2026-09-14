@@ -12,9 +12,11 @@ use App\Livewire\Admin\SitioWeb\SitioWebPanel;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'landing')->name('home');
+$dominio = config('app.domain');
 
-Route::prefix('admin')->name('admin.')->group(function () {
+// Panel admin, aislado en su propio subdominio (admin.{APP_DOMAIN}). Los
+// nombres de ruta (admin.*) no cambian, solo el host que los sirve.
+Route::domain('admin.'.$dominio)->prefix('admin')->name('admin.')->group(function () {
     Route::middleware('guest')->get('/login', Login::class)->name('login');
 
     Route::middleware('auth')->group(function () {
@@ -51,31 +53,47 @@ Route::prefix('admin')->name('admin.')->group(function () {
     });
 });
 
-Route::get('/sitemap.xml', function () {
-    return response()
-        ->view('sitemap')
-        ->header('Content-Type', 'application/xml');
-})->name('sitemap')->middleware('cache.headers:public;max_age=3600');
+// Sitio público: dominio canónico y www (Traefik ya redirige www → canónico
+// en prod; aquí cubrimos también el caso servido directo, p. ej. en dev).
+Route::domain($dominio)->group(function () {
+    Route::view('/', 'landing')->name('home');
 
-Route::get('/robots.txt', function () {
-    return response(
-        "User-agent: *\nDisallow:\n\nSitemap: ".url('/sitemap.xml')."\n"
-    )->header('Content-Type', 'text/plain');
-})->name('robots')->middleware('cache.headers:public;max_age=3600');
+    Route::get('/sitemap.xml', function () {
+        return response()
+            ->view('sitemap')
+            ->header('Content-Type', 'application/xml');
+    })->name('sitemap')->middleware('cache.headers:public;max_age=3600');
 
-// Mapa de 301 desde el sitio Wix anterior. No se tuvo acceso al listado real
-// de URLs de producción (ver CLAUDE.md §7 Migración desde Wix) — cubre las
-// rutas típicas de un sitio Wix de landing (incluye /page4, reportada como
-// rota en la navegación) redirigidas a la sección equivalente de la nueva
-// página única. Ajustar si aparecen más rutas al revisar los logs de Wix.
-Route::redirect('/page4', '/#nosotros', 301);
-Route::redirect('/servicios', '/#servicios', 301);
-Route::redirect('/cotizar', '/#cotizador', 301);
-Route::redirect('/cotizacion', '/#cotizador', 301);
-Route::redirect('/galeria', '/#galeria', 301);
-Route::redirect('/nosotros', '/#nosotros', 301);
-Route::redirect('/contacto', '/#nosotros', 301);
-Route::redirect('/preguntas-frecuentes', '/#faq', 301);
-Route::redirect('/faq', '/#faq', 301);
-Route::redirect('/home', '/', 301);
-Route::redirect('/index', '/', 301);
+    Route::get('/robots.txt', function () {
+        return response(
+            "User-agent: *\nDisallow:\n\nSitemap: ".url('/sitemap.xml')."\n"
+        )->header('Content-Type', 'text/plain');
+    })->name('robots')->middleware('cache.headers:public;max_age=3600');
+
+    // Mapa de 301 desde el sitio Wix anterior. No se tuvo acceso al listado real
+    // de URLs de producción (ver CLAUDE.md §7 Migración desde Wix) — cubre las
+    // rutas típicas de un sitio Wix de landing (incluye /page4, reportada como
+    // rota en la navegación) redirigidas a la sección equivalente de la nueva
+    // página única. Ajustar si aparecen más rutas al revisar los logs de Wix.
+    Route::redirect('/page4', '/#nosotros', 301);
+    Route::redirect('/servicios', '/#servicios', 301);
+    Route::redirect('/cotizar', '/#cotizador', 301);
+    Route::redirect('/cotizacion', '/#cotizador', 301);
+    Route::redirect('/galeria', '/#galeria', 301);
+    Route::redirect('/nosotros', '/#nosotros', 301);
+    Route::redirect('/contacto', '/#nosotros', 301);
+    Route::redirect('/preguntas-frecuentes', '/#faq', 301);
+    Route::redirect('/faq', '/#faq', 301);
+    Route::redirect('/home', '/', 301);
+    Route::redirect('/index', '/', 301);
+});
+
+// www.{APP_DOMAIN} → dominio canónico (sin www), cualquier ruta. En prod
+// Traefik ya hace este 301 a nivel de proxy (ver deploy/docker-compose.yml);
+// esto cubre el caso de servir la app directo sin ese middleware (dev/staging).
+Route::domain('www.'.$dominio)->group(function () use ($dominio) {
+    $aCanonico = fn () => redirect()->to('https://'.$dominio.request()->getRequestUri(), 301);
+
+    Route::any('/', $aCanonico);
+    Route::any('{cualquiera}', $aCanonico)->where('cualquiera', '.*');
+});
