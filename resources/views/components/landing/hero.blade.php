@@ -52,11 +52,10 @@
 
         <div class="relative">
             <div class="border-line/10 aspect-[4/5] w-full overflow-hidden rounded-3xl border bg-white/5 lg:aspect-[5/6]">
-                {{-- Placeholder de marca. Reemplazar por la foto real con el Morro de Arica
-                     de fondo (insumo del dueño): subir el .jpg a public/images/ y cambiar
-                     el nombre del archivo abajo. --}}
+                {{-- Imagen editable desde /admin/sitio-web (tab Imágenes). Sin asignar,
+                     cae al placeholder de marca. --}}
                 <img
-                    src="{{ asset('images/hero-placeholder.svg') }}"
+                    src="{{ landing_media_slot('hero')?->mediaItem?->url ?? asset('images/hero-placeholder.svg') }}"
                     alt="Malla de seguridad instalada con el Morro de Arica de fondo"
                     class="h-full w-full rounded-3xl object-cover"
                     loading="eager"

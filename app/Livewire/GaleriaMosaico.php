@@ -2,18 +2,17 @@
 
 namespace App\Livewire;
 
-use App\Models\GaleriaItem;
+use App\Services\LandingMediaService;
 use Livewire\Component;
 
 class GaleriaMosaico extends Component
 {
     public function render()
     {
+        $album = app(LandingMediaService::class)->slot('galeria-publica')?->mediaAlbum;
+
         return view('livewire.galeria-mosaico', [
-            'items' => GaleriaItem::query()
-                ->where('publicado', true)
-                ->orderBy('orden')
-                ->get(),
+            'items' => $album?->items ?? collect(),
         ]);
     }
 }

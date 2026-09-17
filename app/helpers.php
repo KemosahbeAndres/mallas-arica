@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\LandingMediaSlot;
+use App\Services\LandingMediaService;
 use App\Services\SiteContentService;
 
 if (! function_exists('site_content')) {
@@ -11,5 +13,16 @@ if (! function_exists('site_content')) {
     function site_content(string $key, ?string $default = null): ?string
     {
         return app(SiteContentService::class)->get($key, $default);
+    }
+}
+
+if (! function_exists('landing_media_slot')) {
+    /**
+     * Slot de imagen/álbum asignado a una sección de la landing (hero,
+     * nosotros, galeria-publica). Cacheado por LandingMediaService.
+     */
+    function landing_media_slot(string $slug): ?LandingMediaSlot
+    {
+        return app(LandingMediaService::class)->slot($slug);
     }
 }

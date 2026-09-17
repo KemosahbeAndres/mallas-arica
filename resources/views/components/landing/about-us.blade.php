@@ -2,7 +2,7 @@
     <div class="mx-auto grid max-w-7xl gap-12 px-6 py-20 lg:grid-cols-2 lg:items-center lg:gap-16 lg:px-8">
         <div class="border-line aspect-[4/3] w-full overflow-hidden rounded-3xl border bg-white">
             <img
-                src="{{ asset('images/nosotros-placeholder.jpg') }}"
+                src="{{ landing_media_slot('nosotros')?->mediaItem?->url ?? asset('images/nosotros-placeholder.jpg') }}"
                 alt="Equipo de instalación de Mallas Arica Jacob"
                 class="h-full w-full object-cover"
                 onerror="this.style.display='none'"

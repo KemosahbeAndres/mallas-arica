@@ -6,7 +6,6 @@ use App\Livewire\Admin\Auth\Login;
 use App\Livewire\Admin\Clientes\ClientesIndex;
 use App\Livewire\Admin\Cotizaciones\CotizacionesIndex;
 use App\Livewire\Admin\Cotizaciones\CotizacionForm;
-use App\Livewire\Admin\Galeria\GaleriaIndex;
 use App\Livewire\Admin\Resumen\ResumenIndex;
 use App\Livewire\Admin\SitioWeb\SitioWebPanel;
 use Illuminate\Support\Facades\Auth;
@@ -41,7 +40,7 @@ Route::domain('admin.'.$dominio)->name('admin.')->group(function () {
 
         // CRM «Sitio web» (Sprint 8): contenido, imágenes y FAQ editables.
         Route::get('/sitio-web', SitioWebPanel::class)->name('sitio-web');
-        Route::get('/galeria', GaleriaIndex::class)->name('galeria');
+        Route::redirect('/galeria', '/sitio-web?tab=imagenes')->name('galeria');
 
         Route::post('/logout', function () {
             Auth::guard('web')->logout();

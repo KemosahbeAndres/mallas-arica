@@ -15,7 +15,11 @@
         @if ($tab === 'contenido')
             <livewire:admin.sitio-web.contenido-form />
         @elseif ($tab === 'imagenes')
-            <livewire:admin.galeria.galeria-index />
+            <div class="flex flex-col gap-6">
+                <livewire:admin.media.landing-media-slots />
+                <livewire:admin.media.album-manager />
+                <livewire:admin.media.media-library />
+            </div>
         @else
             <livewire:admin.sitio-web.faq-manager />
         @endif
