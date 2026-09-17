@@ -66,6 +66,6 @@ class ContenidoFormTest extends TestCase
     {
         Auth::logout();
 
-        $this->getAdmin('/admin/sitio-web')->assertRedirect(route('admin.login'));
+        $this->getAdmin('/sitio-web')->assertRedirect(route('admin.login'));
     }
 }

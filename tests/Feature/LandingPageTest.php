@@ -37,6 +37,7 @@ class LandingPageTest extends TestCase
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/xml');
         $response->assertSee(url('/'), false);
+        $response->assertSee('<?xml version="1.0" encoding="UTF-8"?>', false);
     }
 
     public function test_robots_txt_referencia_el_sitemap(): void

@@ -16,7 +16,7 @@ $dominio = config('app.domain');
 
 // Panel admin, aislado en su propio subdominio (admin.{APP_DOMAIN}). Los
 // nombres de ruta (admin.*) no cambian, solo el host que los sirve.
-Route::domain('admin.'.$dominio)->prefix('admin')->name('admin.')->group(function () {
+Route::domain('admin.'.$dominio)->name('admin.')->group(function () {
     Route::middleware('guest')->get('/login', Login::class)->name('login');
 
     Route::middleware('auth')->group(function () {

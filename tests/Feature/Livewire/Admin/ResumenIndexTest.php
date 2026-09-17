@@ -135,6 +135,6 @@ class ResumenIndexTest extends TestCase
 
     public function test_raiz_del_admin_redirige_a_resumen(): void
     {
-        $this->getAdmin('/admin')->assertRedirect(route('admin.resumen'));
+        $this->getAdmin('/')->assertRedirect(route('admin.resumen'));
     }
 }
