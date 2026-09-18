@@ -40,7 +40,31 @@
 
                 @if ($albumAbiertoId === $album->id)
                     <div class="border-line border-t p-4">
-                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                        <form wire:submit="subirVarias({{ $album->id }})" class="border-line bg-cream flex flex-col gap-3 rounded-lg border border-dashed p-4 sm:flex-row sm:items-end">
+                            <div class="flex-1">
+                                <label class="text-ink-soft text-xs font-semibold uppercase">Subir varias imágenes a este álbum</label>
+                                <input type="file" wire:model="fotosMasivas" multiple class="mt-1 block w-full text-sm">
+                                @error('fotosMasivas')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                                @error('fotosMasivas.*')
+                                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                                @enderror
+                                <div wire:loading wire:target="fotosMasivas" class="text-ink-soft mt-1 text-xs">Subiendo…</div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                wire:loading.attr="disabled"
+                                wire:target="subirVarias({{ $album->id }})"
+                                class="bg-brand-red-ui hover:bg-brand-red-dark shrink-0 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-60"
+                            >
+                                <span wire:loading.remove wire:target="subirVarias({{ $album->id }})">Subir al álbum</span>
+                                <span wire:loading wire:target="subirVarias({{ $album->id }})">Guardando…</span>
+                            </button>
+                        </form>
+
+                        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                             @forelse ($album->items as $item)
                                 <div wire:key="album-item-{{ $item->id }}">
                                     <div class="border-line aspect-square overflow-hidden rounded-lg border bg-cream-deep">

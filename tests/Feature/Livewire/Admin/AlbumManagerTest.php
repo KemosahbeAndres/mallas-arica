@@ -6,6 +6,8 @@ use App\Livewire\Admin\Media\AlbumManager;
 use App\Models\MediaAlbum;
 use App\Models\MediaItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 use Tests\Traits\ActuaComoAdmin;
@@ -78,5 +80,53 @@ class AlbumManagerTest extends TestCase
         $this->assertDatabaseMissing('media_albums', ['id' => $album->id]);
         $this->assertDatabaseHas('media_items', ['id' => $item->id]);
         $this->assertNull($item->fresh()->media_album_id);
+    }
+
+    public function test_subir_varias_crea_un_item_por_archivo_asignado_al_album(): void
+    {
+        Storage::fake('public');
+        $album = MediaAlbum::create(['nombre' => 'Balcones']);
+
+        Livewire::test(AlbumManager::class)
+            ->set('fotosMasivas', [
+                UploadedFile::fake()->image('a.jpg'),
+                UploadedFile::fake()->image('b.jpg'),
+                UploadedFile::fake()->image('c.jpg'),
+            ])
+            ->call('subirVarias', $album->id)
+            ->assertHasNoErrors();
+
+        $this->assertSame(3, MediaItem::where('media_album_id', $album->id)->count());
+
+        MediaItem::where('media_album_id', $album->id)->get()->each(
+            fn (MediaItem $item) => Storage::disk('public')->assertExists($item->archivo_path)
+        );
+    }
+
+    public function test_subir_varias_continua_el_orden_del_album(): void
+    {
+        Storage::fake('public');
+        $album = MediaAlbum::create(['nombre' => 'Balcones']);
+        MediaItem::create(['archivo_path' => 'a.jpg', 'titulo' => 'A', 'media_album_id' => $album->id, 'orden' => 3]);
+
+        Livewire::test(AlbumManager::class)
+            ->set('fotosMasivas', [UploadedFile::fake()->image('b.jpg')])
+            ->call('subirVarias', $album->id);
+
+        $nuevo = MediaItem::where('media_album_id', $album->id)->where('archivo_path', '!=', 'a.jpg')->first();
+        $this->assertSame(4, $nuevo->orden);
+    }
+
+    public function test_subir_varias_rechaza_archivo_que_no_es_imagen(): void
+    {
+        Storage::fake('public');
+        $album = MediaAlbum::create(['nombre' => 'Balcones']);
+
+        Livewire::test(AlbumManager::class)
+            ->set('fotosMasivas', [UploadedFile::fake()->create('documento.pdf', 100)])
+            ->call('subirVarias', $album->id)
+            ->assertHasErrors('fotosMasivas.0');
+
+        $this->assertDatabaseCount('media_items', 0);
     }
 }
