@@ -15,6 +15,11 @@
             <h2 class="text-ink mt-3 text-3xl font-extrabold tracking-[-0.02em] sm:text-4xl">
                 {{ site_content('nosotros.titulo', 'Locales de Arica, cuidando a las familias de Arica') }}
             </h2>
+
+            <span class="bg-brand-red-ui/10 text-brand-red-ui border-brand-red-ui/20 mt-4 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold">
+                🗓 {{ site_content('nosotros.antiguedad', 'Instalando mallas de seguridad en Arica desde el año 2012') }}
+            </span>
+
             <p class="text-ink-soft mt-4 text-lg leading-relaxed">
                 {{ site_content('nosotros.texto_1', 'Mallas Arica Jacob está 100% dedicada a dar tranquilidad y seguridad a tu hogar. Instalamos mallas para terrazas, balcones y ventanas con el objetivo de proteger a niños, mascotas y adultos de posibles caídas.') }}
             </p>

@@ -18,6 +18,7 @@ class SiteContentSeeder extends Seeder
         $items = [
             // --- Hero ---
             ['hero.badge', 'text', 'Badge sobre el título', '🛡 Mallas de seguridad certificadas · Arica'],
+            ['hero.antiguedad', 'text', 'Texto de antigüedad (debajo del badge)', 'Instalando en Arica desde el año 2012'],
             ['hero.titulo_1', 'text', 'Título — primera parte', 'Seguridad para tus hijos,'],
             ['hero.titulo_destacado', 'text', 'Título — palabra destacada (roja)', 'tranquilidad'],
             ['hero.titulo_2', 'text', 'Título — tercera parte', 'para tu familia.'],
@@ -31,6 +32,7 @@ class SiteContentSeeder extends Seeder
 
             // --- Nosotros ---
             ['nosotros.titulo', 'text', 'Título de la sección', 'Locales de Arica, cuidando a las familias de Arica'],
+            ['nosotros.antiguedad', 'text', 'Badge de antigüedad (debajo del título)', 'Instalando mallas de seguridad en Arica desde el año 2012'],
             ['nosotros.texto_1', 'textarea', 'Párrafo 1', 'Mallas Arica Jacob está 100% dedicada a dar tranquilidad y seguridad a tu hogar. Instalamos mallas para terrazas, balcones y ventanas con el objetivo de proteger a niños, mascotas y adultos de posibles caídas.'],
             ['nosotros.texto_2', 'textarea', 'Párrafo 2', 'Somos los únicos que instalamos con esta malla certificada directamente por el fabricante, un material completamente seguro y resistente al clima de nuestra ciudad.'],
             ['nosotros.texto_3', 'textarea', 'Párrafo 3', 'Somos de confianza: llegamos puntuales a la hora acordada y siempre respondemos tus mensajes.'],

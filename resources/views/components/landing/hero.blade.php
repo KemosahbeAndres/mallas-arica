@@ -10,6 +10,10 @@
                 {{ site_content('hero.badge', '🛡 Mallas de seguridad certificadas · Arica') }}
             </span>
 
+            <p class="mt-3 text-sm font-semibold text-white/70">
+                {{ site_content('hero.antiguedad', 'Instalando en Arica desde el año 2012') }}
+            </p>
+
             <h1 class="mt-6 text-4xl leading-[1.05] font-extrabold tracking-[-0.02em] text-white sm:text-5xl lg:text-6xl">
                 {{ site_content('hero.titulo_1', 'Seguridad para tus hijos,') }}
                 <span class="text-brand-red-ui">{{ site_content('hero.titulo_destacado', 'tranquilidad') }}</span>
@@ -64,6 +68,10 @@
             <div class="bg-brand-red-ui absolute -bottom-6 -left-6 rounded-2xl px-6 py-4 text-white shadow-xl">
                 <p class="text-2xl font-extrabold tracking-tight">+200</p>
                 <p class="text-xs font-medium text-white/85">kg/m² de resistencia</p>
+            </div>
+            <div class="bg-ink border-brand-red-ui/40 absolute -top-6 -right-6 rounded-2xl border px-6 py-4 text-white shadow-xl">
+                <p class="text-2xl font-extrabold tracking-tight">2012</p>
+                <p class="text-xs font-medium text-white/85">instalando en Arica</p>
             </div>
         </div>
     </div>
