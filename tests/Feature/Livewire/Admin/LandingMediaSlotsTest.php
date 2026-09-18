@@ -32,7 +32,7 @@ class LandingMediaSlotsTest extends TestCase
         $item = MediaItem::create(['archivo_path' => 'a.jpg', 'titulo' => 'Hero', 'orden' => 1]);
 
         Livewire::test(LandingMediaSlots::class)
-            ->set('heroMediaItemId', $item->id)
+            ->set('slots.hero.media_item_id', $item->id)
             ->call('guardar');
 
         $this->assertSame($item->id, LandingMediaSlot::where('slug', 'hero')->first()->media_item_id);
@@ -43,7 +43,7 @@ class LandingMediaSlotsTest extends TestCase
         $album = MediaAlbum::create(['nombre' => 'Galería pública']);
 
         Livewire::test(LandingMediaSlots::class)
-            ->set('galeriaMediaAlbumId', $album->id)
+            ->set('slots.galeria-publica.media_album_id', $album->id)
             ->call('guardar');
 
         $this->assertSame($album->id, LandingMediaSlot::where('slug', 'galeria-publica')->first()->media_album_id);
@@ -55,7 +55,7 @@ class LandingMediaSlotsTest extends TestCase
         LandingMediaSlot::where('slug', 'hero')->update(['media_item_id' => $item->id]);
 
         Livewire::test(LandingMediaSlots::class)
-            ->set('heroMediaItemId', null)
+            ->set('slots.hero.media_item_id', null)
             ->call('guardar');
 
         $this->assertNull(LandingMediaSlot::where('slug', 'hero')->first()->media_item_id);
@@ -68,9 +68,39 @@ class LandingMediaSlotsTest extends TestCase
         app(LandingMediaService::class)->slots();
 
         Livewire::test(LandingMediaSlots::class)
-            ->set('heroMediaItemId', $item->id)
+            ->set('slots.hero.media_item_id', $item->id)
             ->call('guardar');
 
         $this->assertSame($item->id, app(LandingMediaService::class)->slot('hero')?->media_item_id);
+    }
+
+    public function test_guarda_encuadre_y_posicion(): void
+    {
+        Livewire::test(LandingMediaSlots::class)
+            ->set('slots.hero.encuadre', 'contain')
+            ->set('slots.hero.posicion_x', 20)
+            ->set('slots.hero.posicion_y', 80)
+            ->call('guardar');
+
+        $slot = LandingMediaSlot::where('slug', 'hero')->first();
+        $this->assertSame('contain', $slot->encuadre);
+        $this->assertSame(20, $slot->posicion_x);
+        $this->assertSame(80, $slot->posicion_y);
+    }
+
+    public function test_fijar_posicion_aplica_el_preset(): void
+    {
+        Livewire::test(LandingMediaSlots::class)
+            ->call('fijarPosicion', 'hero', 'arriba')
+            ->assertSet('slots.hero.posicion_x', 50)
+            ->assertSet('slots.hero.posicion_y', 0);
+    }
+
+    public function test_encuadre_invalido_es_rechazado(): void
+    {
+        Livewire::test(LandingMediaSlots::class)
+            ->set('slots.hero.encuadre', 'zoom')
+            ->call('guardar')
+            ->assertHasErrors('slots.hero.encuadre');
     }
 }

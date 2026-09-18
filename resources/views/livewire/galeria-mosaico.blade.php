@@ -55,7 +55,8 @@
                             src="{{ $item->url }}"
                             alt="{{ $item->titulo }}"
                             loading="lazy"
-                            class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            class="h-full w-full transition-transform duration-300 group-hover:scale-105"
+                            style="{{ $estiloImagen }}"
                         >
                         <span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 text-left text-sm font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
                             {{ $item->titulo }}

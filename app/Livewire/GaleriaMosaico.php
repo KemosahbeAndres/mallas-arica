@@ -9,10 +9,11 @@ class GaleriaMosaico extends Component
 {
     public function render()
     {
-        $album = app(LandingMediaService::class)->slot('galeria-publica')?->mediaAlbum;
+        $slot = app(LandingMediaService::class)->slot('galeria-publica');
 
         return view('livewire.galeria-mosaico', [
-            'items' => $album?->items ?? collect(),
+            'items' => $slot?->mediaAlbum?->items ?? collect(),
+            'estiloImagen' => $slot?->estiloImagen ?? 'object-fit: cover;',
         ]);
     }
 }

@@ -95,6 +95,13 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
+# nginx.conf corre el worker como www-data, pero el paquete Alpine crea
+# /var/lib/nginx (incluido client_body/, donde nginx bufferea el cuerpo de
+# cada POST antes de pasarlo a PHP-FPM) con owner `nginx`. Sin este chown,
+# cualquier subida de archivo (uploads de Livewire, fotos de trabajos) falla
+# con "Permission denied" al escribir el body temporal.
+RUN chown -R www-data:www-data /var/lib/nginx
+
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

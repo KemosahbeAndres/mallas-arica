@@ -54,14 +54,16 @@
             </ul>
         </div>
 
+        @php $heroSlot = landing_media_slot('hero'); @endphp
         <div class="relative">
             <div class="border-line/10 aspect-[4/5] w-full overflow-hidden rounded-3xl border bg-white/5 lg:aspect-[5/6]">
                 {{-- Imagen editable desde /admin/sitio-web (tab Imágenes). Sin asignar,
                      cae al placeholder de marca. --}}
                 <img
-                    src="{{ landing_media_slot('hero')?->mediaItem?->url ?? asset('images/hero-placeholder.svg') }}"
+                    src="{{ $heroSlot?->mediaItem?->url ?? asset('images/hero-placeholder.svg') }}"
                     alt="Malla de seguridad instalada con el Morro de Arica de fondo"
-                    class="h-full w-full rounded-3xl object-cover"
+                    class="h-full w-full rounded-3xl"
+                    style="{{ $heroSlot?->estiloImagen ?? 'object-fit: cover;' }}"
                     loading="eager"
                 >
             </div>
