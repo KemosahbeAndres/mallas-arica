@@ -8,12 +8,18 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class AlbumManager extends Component
 {
+    use WithFileUploads;
+
     public string $nombreNuevoAlbum = '';
 
     public ?int $albumAbiertoId = null;
+
+    /** @var array<int, mixed> */
+    public array $fotosMasivas = [];
 
     #[Computed]
     public function albumes()
@@ -54,6 +60,29 @@ class AlbumManager extends Component
     public function abrir(int $albumId): void
     {
         $this->albumAbiertoId = $this->albumAbiertoId === $albumId ? null : $albumId;
+    }
+
+    public function subirVarias(MediaAlbum $album): void
+    {
+        $this->validate([
+            'fotosMasivas' => ['required', 'array', 'min:1'],
+            'fotosMasivas.*' => ['image', 'max:4096'],
+        ]);
+
+        $orden = $album->items()->max('orden') ?? 0;
+
+        foreach ($this->fotosMasivas as $foto) {
+            $orden++;
+
+            MediaItem::create([
+                'archivo_path' => $foto->store('media', 'public'),
+                'media_album_id' => $album->id,
+                'orden' => $orden,
+            ]);
+        }
+
+        $this->reset('fotosMasivas');
+        $this->dispatch('media-actualizada');
     }
 
     public function agregarItem(MediaAlbum $album, MediaItem $item): void
