@@ -20,7 +20,7 @@
                 <x-admin.navbar />
 
                 <div class="bg-cream-deep border-line border-b">
-                    <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+                    <div class="mx-auto flex w-[90%] max-w-[70rem] flex-wrap items-center justify-between gap-3 px-6 py-4 xl:w-[70%] xl:max-w-none">
                         <div>
                             <h1 class="text-ink text-lg font-bold tracking-tight">{{ $title ?? 'Panel' }}</h1>
                             @if ($subtitle)
@@ -30,7 +30,7 @@
                     </div>
                 </div>
 
-                <main class="w-full flex-1 px-6 py-5">
+                <main class="mx-auto w-[90%] max-w-[70rem] flex-1 px-6 py-5 xl:w-[70%] xl:max-w-none">
                     {{ $slot }}
                 </main>
             </div>

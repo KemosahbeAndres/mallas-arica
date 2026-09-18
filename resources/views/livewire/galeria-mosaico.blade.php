@@ -29,6 +29,20 @@
 
         @if ($items->isEmpty())
             <p class="text-ink-soft mt-12">Muy pronto vamos a publicar fotos de nuestros trabajos aquí.</p>
+
+            <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                @for ($i = 0; $i < 6; $i++)
+                    <div class="border-line/60 bg-cream aspect-square rounded-2xl border border-dashed">
+                        <div class="flex h-full w-full items-center justify-center">
+                            <svg viewBox="0 0 24 24" fill="none" class="text-ink-soft/30 h-10 w-10">
+                                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                @endfor
+            </div>
         @else
             <div class="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3">
                 @foreach ($items as $index => $item)

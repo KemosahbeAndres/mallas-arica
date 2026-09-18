@@ -10,6 +10,10 @@
                 {{ site_content('hero.badge', '🛡 Mallas de seguridad certificadas · Arica') }}
             </span>
 
+            <p class="mt-3 text-sm font-semibold text-white/70">
+                {{ site_content('hero.antiguedad', 'Instalando en Arica desde el año 2012') }}
+            </p>
+
             <h1 class="mt-6 text-4xl leading-[1.05] font-extrabold tracking-[-0.02em] text-white sm:text-5xl lg:text-6xl">
                 {{ site_content('hero.titulo_1', 'Seguridad para tus hijos,') }}
                 <span class="text-brand-red-ui">{{ site_content('hero.titulo_destacado', 'tranquilidad') }}</span>
@@ -52,11 +56,10 @@
 
         <div class="relative">
             <div class="border-line/10 aspect-[4/5] w-full overflow-hidden rounded-3xl border bg-white/5 lg:aspect-[5/6]">
-                {{-- Placeholder de marca. Reemplazar por la foto real con el Morro de Arica
-                     de fondo (insumo del dueño): subir el .jpg a public/images/ y cambiar
-                     el nombre del archivo abajo. --}}
+                {{-- Imagen editable desde /admin/sitio-web (tab Imágenes). Sin asignar,
+                     cae al placeholder de marca. --}}
                 <img
-                    src="{{ asset('images/hero-placeholder.svg') }}"
+                    src="{{ landing_media_slot('hero')?->mediaItem?->url ?? asset('images/hero-placeholder.svg') }}"
                     alt="Malla de seguridad instalada con el Morro de Arica de fondo"
                     class="h-full w-full rounded-3xl object-cover"
                     loading="eager"
@@ -65,6 +68,10 @@
             <div class="bg-brand-red-ui absolute -bottom-6 -left-6 rounded-2xl px-6 py-4 text-white shadow-xl">
                 <p class="text-2xl font-extrabold tracking-tight">+200</p>
                 <p class="text-xs font-medium text-white/85">kg/m² de resistencia</p>
+            </div>
+            <div class="bg-ink border-brand-red-ui/40 absolute -top-6 -right-6 rounded-2xl border px-6 py-4 text-white shadow-xl">
+                <p class="text-2xl font-extrabold tracking-tight">2012</p>
+                <p class="text-xs font-medium text-white/85">instalando en Arica</p>
             </div>
         </div>
     </div>

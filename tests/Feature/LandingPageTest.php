@@ -19,6 +19,14 @@ class LandingPageTest extends TestCase
         $response->assertSee('Ventanas');
     }
 
+    public function test_el_hero_y_nosotros_destacan_la_antiguedad_de_la_empresa(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertSeeInOrder(['2012', '2012']);
+    }
+
     public function test_la_landing_incluye_schema_local_business_y_faq(): void
     {
         $this->seed(FaqSeeder::class);
