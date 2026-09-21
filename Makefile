@@ -9,10 +9,14 @@ up:
 serve:
 	@echo "PHP artisan server started"
 	php artisan serve
-	
 
 npm:
-	@echo "Styles compiled" && npm run dev
+	@echo "Styles compiled"
+	npm run dev
+
+seed:
+	@echo "Seeding the database..."
+	php artisan db:seed
 
 dev:
 	@echo "Starting the ${APP_NAME} for development session..."

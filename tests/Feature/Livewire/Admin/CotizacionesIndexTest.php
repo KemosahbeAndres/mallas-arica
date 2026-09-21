@@ -122,4 +122,36 @@ class CotizacionesIndexTest extends TestCase
             ->call('cambiarEstado', 'aceptada')
             ->assertSet('mostrandoAgendar', false);
     }
+
+    public function test_colaborador_no_puede_acceder_a_cotizaciones(): void
+    {
+        $this->actuarComoUsuario('colaborador');
+
+        Livewire::test(CotizacionesIndex::class)->assertForbidden();
+    }
+
+    public function test_supervisor_puede_cambiar_estado_de_cotizacion(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+        $cot = $this->cotizacion('generada');
+
+        Livewire::test(CotizacionesIndex::class)
+            ->call('seleccionar', $cot->id)
+            ->call('cambiarEstado', 'rechazada');
+
+        $this->assertSame('rechazada', $cot->refresh()->estado);
+    }
+
+    public function test_supervisor_no_puede_eliminar_cotizacion(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+        $cot = $this->cotizacion();
+
+        Livewire::test(CotizacionesIndex::class)
+            ->call('seleccionar', $cot->id)
+            ->call('eliminar')
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('cotizaciones', ['id' => $cot->id, 'deleted_at' => null]);
+    }
 }

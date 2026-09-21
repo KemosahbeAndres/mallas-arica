@@ -40,6 +40,8 @@ class CotizacionForm extends Component
 
     public function mount(?Cotizacion $cotizacion = null): void
     {
+        abort_unless(auth()->user()->puedeGestionarClientesYCotizaciones(), 403);
+
         if ($cotizacion && $cotizacion->exists) {
             $this->cotizacion = $cotizacion->load(['items', 'cliente', 'clienteDireccion']);
             $this->modoCliente = 'existente';

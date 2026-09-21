@@ -2,9 +2,12 @@
 
 namespace Tests\Unit;
 
+use App\Exceptions\TrabajoTransicionInvalidaException;
 use App\Models\Cliente;
 use App\Models\Evento;
 use App\Models\Trabajo;
+use App\Models\TrabajoFoto;
+use App\Models\User;
 use App\Services\TrabajoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -110,5 +113,79 @@ class TrabajoServiceTest extends TestCase
 
         $this->assertNull($this->ot->refresh()->evento_id);
         $this->assertSoftDeleted('eventos', ['id' => $evento->id]);
+    }
+
+    public function test_colaborador_no_puede_cambiar_a_pendiente(): void
+    {
+        $colaborador = User::factory()->rol('colaborador')->create();
+        $this->ot->colaboradores()->attach($colaborador);
+
+        $this->expectException(TrabajoTransicionInvalidaException::class);
+        $this->service->cambiarEstado($this->ot, 'pendiente', null, $colaborador);
+    }
+
+    public function test_colaborador_no_puede_cambiar_a_cancelada(): void
+    {
+        $colaborador = User::factory()->rol('colaborador')->create();
+        $this->ot->colaboradores()->attach($colaborador);
+
+        $this->expectException(TrabajoTransicionInvalidaException::class);
+        $this->service->cambiarEstado($this->ot, 'cancelada', null, $colaborador);
+    }
+
+    public function test_colaborador_puede_cambiar_a_en_curso_si_esta_asignado(): void
+    {
+        $colaborador = User::factory()->rol('colaborador')->create();
+        $this->ot->colaboradores()->attach($colaborador);
+
+        $this->service->cambiarEstado($this->ot, 'en_curso', null, $colaborador);
+
+        $this->assertSame('en_curso', $this->ot->refresh()->estado);
+    }
+
+    public function test_colaborador_no_asignado_no_puede_cambiar_estado(): void
+    {
+        $colaborador = User::factory()->rol('colaborador')->create();
+
+        $this->expectException(TrabajoTransicionInvalidaException::class);
+        $this->service->cambiarEstado($this->ot, 'en_curso', null, $colaborador);
+    }
+
+    public function test_bloquea_ejecutada_si_faltan_fotos(): void
+    {
+        $this->ot->update(['cantidad_ventanas' => 2]);
+
+        $this->expectException(TrabajoTransicionInvalidaException::class);
+        $this->service->cambiarEstado($this->ot, 'ejecutada');
+    }
+
+    public function test_permite_ejecutada_si_cumple_minimo_fotos(): void
+    {
+        $this->ot->update(['cantidad_ventanas' => 2]);
+        TrabajoFoto::factory()->count(2)->create(['trabajo_id' => $this->ot->id]);
+
+        $this->service->cambiarEstado($this->ot, 'ejecutada');
+
+        $this->assertSame('ejecutada', $this->ot->refresh()->estado);
+    }
+
+    public function test_minimo_fotos_se_calcula_ventanas_y_balcones(): void
+    {
+        $this->ot->update(['cantidad_ventanas' => 3, 'cantidad_balcones' => 2]);
+
+        $this->assertSame(7, $this->ot->minimoFotos());
+    }
+
+    public function test_asignar_colaboradores_sincroniza_pivote(): void
+    {
+        $c1 = User::factory()->rol('colaborador')->create();
+        $c2 = User::factory()->rol('colaborador')->create();
+        $c3 = User::factory()->rol('colaborador')->create();
+
+        $this->service->asignarColaboradores($this->ot, [$c1->id, $c2->id]);
+        $this->assertSame([$c1->id, $c2->id], $this->ot->colaboradores()->pluck('users.id')->sort()->values()->all());
+
+        $this->service->asignarColaboradores($this->ot, [$c3->id]);
+        $this->assertSame([$c3->id], $this->ot->colaboradores()->pluck('users.id')->all());
     }
 }

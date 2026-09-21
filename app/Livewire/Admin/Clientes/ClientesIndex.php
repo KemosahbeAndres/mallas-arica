@@ -54,6 +54,8 @@ class ClientesIndex extends Component
 
     public function mount(): void
     {
+        abort_unless(! auth()->user()->esColaborador(), 403);
+
         if ($this->seleccionado && Cliente::whereKey($this->seleccionado)->exists()) {
             $this->cargar($this->seleccionado);
         } else {
@@ -118,6 +120,7 @@ class ClientesIndex extends Component
         $fila = $this->direcciones[$indice] ?? null;
 
         if ($fila && $fila['id']) {
+            abort_unless(auth()->user()->puedeEliminar(), 403);
             ClienteDireccion::whereKey($fila['id'])->delete();
         }
 
@@ -169,6 +172,8 @@ class ClientesIndex extends Component
         if (! $this->seleccionado) {
             return;
         }
+
+        abort_unless(auth()->user()->puedeEliminar(), 403);
 
         Cliente::whereKey($this->seleccionado)->delete();
 

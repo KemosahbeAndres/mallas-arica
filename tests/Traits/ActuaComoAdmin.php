@@ -13,4 +13,12 @@ trait ActuaComoAdmin
 
         return $admin;
     }
+
+    protected function actuarComoUsuario(string $rol): User
+    {
+        $usuario = User::factory()->rol($rol)->create();
+        $this->actingAs($usuario);
+
+        return $usuario;
+    }
 }

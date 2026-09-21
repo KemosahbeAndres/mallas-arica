@@ -2,12 +2,16 @@
 
 use App\Http\Controllers\CotizacionPdfController;
 use App\Livewire\Admin\Agenda\AgendaIndex;
+use App\Livewire\Admin\Agenda\MiAgenda;
 use App\Livewire\Admin\Auth\Login;
 use App\Livewire\Admin\Clientes\ClientesIndex;
 use App\Livewire\Admin\Cotizaciones\CotizacionesIndex;
 use App\Livewire\Admin\Cotizaciones\CotizacionForm;
+use App\Livewire\Admin\Perfil\PerfilForm;
 use App\Livewire\Admin\Resumen\ResumenIndex;
 use App\Livewire\Admin\SitioWeb\SitioWebPanel;
+use App\Livewire\Admin\Trabajos\TrabajoShow;
+use App\Livewire\Admin\Usuarios\UsuariosIndex;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -38,9 +42,21 @@ Route::domain('admin.'.$dominio)->name('admin.')->group(function () {
         // pendientes de agendar + agenda del mes, en una sola página.
         Route::get('/agenda', AgendaIndex::class)->name('agenda');
 
+        // Agenda de solo lectura para colaborador: sus propias OT asignadas.
+        Route::get('/mi-agenda', MiAgenda::class)->name('agenda.mia');
+
+        // Ficha de una OT: estado + evidencia fotográfica. Usada por
+        // colaborador (su propia OT), supervisor y administrador/super_admin.
+        Route::get('/trabajos/{trabajo}', TrabajoShow::class)->name('trabajos.show');
+
         // CRM «Sitio web» (Sprint 8): contenido, imágenes y FAQ editables.
         Route::get('/sitio-web', SitioWebPanel::class)->name('sitio-web');
         Route::redirect('/galeria', '/sitio-web?tab=imagenes')->name('galeria');
+
+        // Gestión de usuarios del panel (Super Administrador y Administrador) y
+        // autogestión de perfil (todos los roles).
+        Route::get('/usuarios', UsuariosIndex::class)->name('usuarios');
+        Route::get('/perfil', PerfilForm::class)->name('perfil');
 
         Route::post('/logout', function () {
             Auth::guard('web')->logout();
