@@ -24,6 +24,8 @@ class UsuariosIndex extends Component
 
     public string $email = '';
 
+    public string $emailGoogle = '';
+
     public string $telefono = '';
 
     public string $rol = 'colaborador';
@@ -51,7 +53,16 @@ class UsuariosIndex extends Component
     {
         return [
             'nombre' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->seleccionado)],
+            'email' => [
+                'required', 'email', 'max:255',
+                User::reglaEmailCorporativo(),
+                Rule::unique('users', 'email')->ignore($this->seleccionado),
+            ],
+            'emailGoogle' => [
+                'nullable', 'email', 'max:255',
+                Rule::unique('users', 'email_google')->ignore($this->seleccionado),
+                Rule::notIn([trim($this->email)]),
+            ],
             'telefono' => ['nullable', 'string', 'max:40'],
             'rol' => ['required', Rule::in(User::ROLES)],
             'password' => [$this->seleccionado ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'],
@@ -64,7 +75,10 @@ class UsuariosIndex extends Component
         return [
             'nombre.required' => 'El nombre es obligatorio.',
             'email.required' => 'El correo es obligatorio.',
+            'email.ends_with' => 'El correo principal debe ser una dirección @'.User::DOMINIO_CORPORATIVO.'.',
             'email.unique' => 'Ese correo ya está en uso por otro usuario.',
+            'emailGoogle.unique' => 'Ese correo de Google ya está vinculado a otro usuario.',
+            'emailGoogle.not_in' => 'El correo de Google debe ser distinto al correo principal.',
             'password.required' => 'La contraseña es obligatoria para un usuario nuevo.',
             'password.confirmed' => 'La confirmación de contraseña no coincide.',
         ];
@@ -98,7 +112,7 @@ class UsuariosIndex extends Component
     public function nuevo(): void
     {
         $this->seleccionado = null;
-        $this->reset(['nombre', 'email', 'telefono', 'password', 'password_confirmation', 'foto', 'guardado']);
+        $this->reset(['nombre', 'email', 'emailGoogle', 'telefono', 'password', 'password_confirmation', 'foto', 'guardado']);
         $this->rol = 'colaborador';
         $this->resetValidation();
         unset($this->usuarioSeleccionado);
@@ -116,6 +130,7 @@ class UsuariosIndex extends Component
         $this->seleccionado = $usuario->id;
         $this->nombre = $usuario->name;
         $this->email = $usuario->email;
+        $this->emailGoogle = (string) $usuario->email_google;
         $this->telefono = (string) $usuario->telefono;
         $this->rol = $usuario->rol;
         $this->password = '';
@@ -147,6 +162,7 @@ class UsuariosIndex extends Component
         $usuario->fill([
             'name' => trim($this->nombre),
             'email' => trim($this->email),
+            'email_google' => trim($this->emailGoogle) ?: null,
             'telefono' => trim($this->telefono) ?: null,
             'rol' => $this->rol,
         ]);

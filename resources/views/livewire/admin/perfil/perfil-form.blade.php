@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-xl">
+<div>
     <div class="border-line rounded-lg border bg-white px-4 py-4">
         @if ($guardado)
             <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-medium text-green-800">
@@ -41,10 +41,16 @@
                     @error('nombre') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label class="text-ink-soft block text-sm font-semibold" for="perfil-email">Correo</label>
+                    <label class="text-ink-soft block text-sm font-semibold" for="perfil-email">Correo ({{ '@'.\App\Models\User::DOMINIO_CORPORATIVO }})</label>
                     <input id="perfil-email" type="email" wire:model="email"
                         class="border-line focus:border-brand-red-ui focus:ring-brand-red-ui/20 mt-1.5 w-full rounded-lg border px-3 py-2 text-sm focus:ring">
                     @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="text-ink-soft block text-sm font-semibold" for="perfil-email-google">Correo de Google (para iniciar sesión)</label>
+                    <input id="perfil-email-google" type="email" wire:model="emailGoogle" placeholder="tu-correo@gmail.com"
+                        class="border-line focus:border-brand-red-ui focus:ring-brand-red-ui/20 mt-1.5 w-full rounded-lg border px-3 py-2 text-sm focus:ring">
+                    @error('emailGoogle') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div class="sm:col-span-2">
                     <label class="text-ink-soft block text-sm font-semibold" for="perfil-telefono">Teléfono</label>

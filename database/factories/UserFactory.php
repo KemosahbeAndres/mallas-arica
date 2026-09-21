@@ -26,7 +26,7 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'email' => Str::slug(fake()->unique()->userName()).'@'.User::DOMINIO_CORPORATIVO,
             'email_verified_at' => now(),
             'rol' => User::ROL_SUPER_ADMIN,
             'password' => static::$password ??= Hash::make('password'),

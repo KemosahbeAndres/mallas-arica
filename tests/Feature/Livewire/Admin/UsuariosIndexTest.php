@@ -225,4 +225,68 @@ class UsuariosIndexTest extends TestCase
             ->assertSee('Carlos Ruiz')
             ->assertDontSee('Beto Silva');
     }
+
+    public function test_email_principal_debe_ser_del_dominio_corporativo(): void
+    {
+        $this->actuarComoAdmin();
+
+        Livewire::test(UsuariosIndex::class)
+            ->call('nuevo')
+            ->set('nombre', 'Externo')
+            ->set('email', 'externo@gmail.com')
+            ->set('password', 'password123')
+            ->set('password_confirmation', 'password123')
+            ->call('guardar')
+            ->assertHasErrors('email');
+
+        $this->assertDatabaseMissing('users', ['email' => 'externo@gmail.com']);
+    }
+
+    public function test_vincula_un_correo_de_google_al_crear_usuario(): void
+    {
+        $this->actuarComoAdmin();
+
+        Livewire::test(UsuariosIndex::class)
+            ->call('nuevo')
+            ->set('nombre', 'Con Gmail')
+            ->set('email', 'congmail@mallasarica.cl')
+            ->set('emailGoogle', 'congmail@gmail.com')
+            ->set('password', 'password123')
+            ->set('password_confirmation', 'password123')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('users', ['email' => 'congmail@mallasarica.cl', 'email_google' => 'congmail@gmail.com']);
+    }
+
+    public function test_correo_de_google_duplicado_no_guarda(): void
+    {
+        $this->actuarComoAdmin();
+        User::factory()->rol('colaborador')->create(['email_google' => 'ocupado@gmail.com']);
+
+        Livewire::test(UsuariosIndex::class)
+            ->call('nuevo')
+            ->set('nombre', 'Otro')
+            ->set('email', 'otro@mallasarica.cl')
+            ->set('emailGoogle', 'ocupado@gmail.com')
+            ->set('password', 'password123')
+            ->set('password_confirmation', 'password123')
+            ->call('guardar')
+            ->assertHasErrors('emailGoogle');
+    }
+
+    public function test_correo_de_google_no_puede_ser_igual_al_principal(): void
+    {
+        $this->actuarComoAdmin();
+
+        Livewire::test(UsuariosIndex::class)
+            ->call('nuevo')
+            ->set('nombre', 'Igual')
+            ->set('email', 'igual@mallasarica.cl')
+            ->set('emailGoogle', 'igual@mallasarica.cl')
+            ->set('password', 'password123')
+            ->set('password_confirmation', 'password123')
+            ->call('guardar')
+            ->assertHasErrors('emailGoogle');
+    }
 }

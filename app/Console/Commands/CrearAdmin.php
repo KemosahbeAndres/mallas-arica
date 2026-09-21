@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\User;
 use App\Support\AdminUserManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
@@ -36,7 +37,7 @@ class CrearAdmin extends Command
 
         $validator = Validator::make(
             ['email' => $email, 'password' => $password],
-            ['email' => ['required', 'email'], 'password' => ['required', 'string', 'min:8']],
+            ['email' => ['required', 'email', User::reglaEmailCorporativo()], 'password' => ['required', 'string', 'min:8']],
         );
 
         if ($validator->fails()) {

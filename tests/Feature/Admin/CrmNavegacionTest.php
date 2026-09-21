@@ -78,13 +78,20 @@ class CrmNavegacionTest extends TestCase
         $this->getAdmin('/usuarios')->assertForbidden();
     }
 
-    public function test_perfil_es_accesible_para_cualquier_rol_autenticado(): void
+    public function test_ajustes_es_accesible_para_cualquier_rol_autenticado(): void
     {
         $this->actuarComoUsuario('supervisor');
 
-        $this->getAdmin('/perfil')
+        $this->getAdmin('/ajustes')
             ->assertOk()
-            ->assertSee('Mi perfil');
+            ->assertSee('Perfil');
+    }
+
+    public function test_ruta_perfil_redirige_a_ajustes(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+
+        $this->getAdmin('/perfil')->assertRedirect(route('admin.ajustes'));
     }
 
     public function test_colaborador_no_ve_links_de_cotizar_clientes_sitio_web_ni_usuarios(): void
@@ -119,5 +126,30 @@ class CrmNavegacionTest extends TestCase
         $this->getAdmin('/resumen')
             ->assertSee('Cotizar')
             ->assertSee(route('admin.agenda'), false);
+    }
+
+    public function test_cualquier_rol_ve_ajustes_en_el_dropdown_de_usuario(): void
+    {
+        $this->actuarComoUsuario('colaborador');
+
+        $this->getAdmin('/resumen')->assertSee('Ajustes');
+    }
+
+    public function test_solo_super_admin_ve_la_pestana_google_sso(): void
+    {
+        $this->actuarComoAdmin();
+        $this->getAdmin('/ajustes')->assertSee('Google SSO');
+
+        $this->actuarComoUsuario('administrador');
+        $this->getAdmin('/ajustes')->assertDontSee('Google SSO');
+    }
+
+    public function test_administrador_no_puede_forzar_el_tab_de_google_sso(): void
+    {
+        $this->actuarComoUsuario('administrador');
+
+        $this->getAdmin('/ajustes?tab=google')
+            ->assertOk()
+            ->assertDontSee('Redirect URI a autorizar');
     }
 }

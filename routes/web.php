@@ -1,13 +1,14 @@
 <?php
 
+use App\Http\Controllers\Auth\GoogleLoginController;
 use App\Http\Controllers\CotizacionPdfController;
 use App\Livewire\Admin\Agenda\AgendaIndex;
 use App\Livewire\Admin\Agenda\MiAgenda;
+use App\Livewire\Admin\Ajustes\AjustesPanel;
 use App\Livewire\Admin\Auth\Login;
 use App\Livewire\Admin\Clientes\ClientesIndex;
 use App\Livewire\Admin\Cotizaciones\CotizacionesIndex;
 use App\Livewire\Admin\Cotizaciones\CotizacionForm;
-use App\Livewire\Admin\Perfil\PerfilForm;
 use App\Livewire\Admin\Resumen\ResumenIndex;
 use App\Livewire\Admin\SitioWeb\SitioWebPanel;
 use App\Livewire\Admin\Trabajos\TrabajoShow;
@@ -21,6 +22,9 @@ $dominio = config('app.domain');
 // nombres de ruta (admin.*) no cambian, solo el host que los sirve.
 Route::domain('admin.'.$dominio)->name('admin.')->group(function () {
     Route::middleware('guest')->get('/login', Login::class)->name('login');
+    Route::middleware('guest')->get('/login/google', [GoogleLoginController::class, 'redirect'])->name('login.google');
+    Route::middleware('guest')->get('/login/google/callback', [GoogleLoginController::class, 'callback'])->name('login.google.callback');
+    Route::middleware('guest')->get('/login/google/consumir/{token}', [GoogleLoginController::class, 'consumirToken'])->name('login.google.consumir');
 
     Route::middleware('auth')->group(function () {
         Route::get('/', fn () => redirect()->route('admin.resumen'));
@@ -53,10 +57,14 @@ Route::domain('admin.'.$dominio)->name('admin.')->group(function () {
         Route::get('/sitio-web', SitioWebPanel::class)->name('sitio-web');
         Route::redirect('/galeria', '/sitio-web?tab=imagenes')->name('galeria');
 
-        // Gestión de usuarios del panel (Super Administrador y Administrador) y
-        // autogestión de perfil (todos los roles).
+        // Gestión de usuarios del panel (Super Administrador y Administrador).
         Route::get('/usuarios', UsuariosIndex::class)->name('usuarios');
-        Route::get('/perfil', PerfilForm::class)->name('perfil');
+
+        // «Ajustes»: página única con submenú vertical (Perfil, Apariencia,
+        // Google SSO — este último solo super_admin), accesible desde el
+        // dropdown de usuario del navbar, no desde la navbar horizontal.
+        Route::get('/ajustes', AjustesPanel::class)->name('ajustes');
+        Route::redirect('/perfil', '/ajustes')->name('perfil');
 
         Route::post('/logout', function () {
             Auth::guard('web')->logout();
@@ -70,8 +78,18 @@ Route::domain('admin.'.$dominio)->name('admin.')->group(function () {
 
 // Sitio público: dominio canónico y www (Traefik ya redirige www → canónico
 // en prod; aquí cubrimos también el caso servido directo, p. ej. en dev).
-Route::domain($dominio)->group(function () {
+Route::domain($dominio)->group(function () use ($dominio) {
     Route::view('/', 'landing')->name('home');
+
+    // Google no acepta "admin.localhost" como redirect URI de OAuth (solo
+    // "localhost" pelado o un dominio HTTPS real) — en local únicamente,
+    // este endpoint sin subdominio delega al mismo controlador que
+    // admin.login.google.callback. No existe en dev/prod: ahí el dominio
+    // real (mallas.tinorte.cl / mallasarica.cl) sí sirve como redirect URI.
+    if ($dominio === 'localhost') {
+        Route::get('/login/google/callback', [GoogleLoginController::class, 'callback'])
+            ->name('login.google.callback.local');
+    }
 
     Route::get('/sitemap.xml', function () {
         return response()

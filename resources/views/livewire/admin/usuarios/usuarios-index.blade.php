@@ -1,4 +1,4 @@
-<div class="grid gap-4 lg:grid-cols-[20rem_1fr]">
+<div class="grid gap-4 lg:grid-cols-2">
     {{-- Lista maestra --}}
     <div class="flex flex-col gap-3">
         <button
@@ -82,10 +82,16 @@
                     @error('nombre') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label class="text-ink-soft block text-sm font-semibold" for="usr-email">Correo</label>
-                    <input id="usr-email" type="email" wire:model="email"
+                    <label class="text-ink-soft block text-sm font-semibold" for="usr-email">Correo ({{ '@'.\App\Models\User::DOMINIO_CORPORATIVO }})</label>
+                    <input id="usr-email" type="email" wire:model="email" placeholder="{{ 'nombre@'.\App\Models\User::DOMINIO_CORPORATIVO }}"
                         class="border-line focus:border-brand-red-ui focus:ring-brand-red-ui/20 mt-1.5 w-full rounded-lg border px-3 py-2 text-sm focus:ring">
                     @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="text-ink-soft block text-sm font-semibold" for="usr-email-google">Correo de Google (para iniciar sesión)</label>
+                    <input id="usr-email-google" type="email" wire:model="emailGoogle" placeholder="tu-correo@gmail.com"
+                        class="border-line focus:border-brand-red-ui focus:ring-brand-red-ui/20 mt-1.5 w-full rounded-lg border px-3 py-2 text-sm focus:ring">
+                    @error('emailGoogle') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="text-ink-soft block text-sm font-semibold" for="usr-telefono">Teléfono</label>

@@ -147,11 +147,11 @@
                     class="border-line absolute right-0 top-full z-20 mt-2 min-w-[10rem] rounded-lg border bg-white p-1.5 shadow-lg"
                 >
                     <a
-                        href="{{ route('admin.perfil') }}"
+                        href="{{ route('admin.ajustes') }}"
                         wire:navigate
                         class="text-ink-soft hover:bg-cream-deep block rounded-md px-3 py-2 text-sm font-medium transition-colors"
                     >
-                        Mi perfil
+                        Ajustes
                     </a>
                     <form method="POST" action="{{ route('admin.logout') }}">
                         @csrf

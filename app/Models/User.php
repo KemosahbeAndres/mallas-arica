@@ -16,6 +16,9 @@ class User extends Authenticatable
 
     public const ROL_SUPER_ADMIN = 'super_admin';
 
+    /** Dominio obligatorio del email principal (identidad corporativa). */
+    public const DOMINIO_CORPORATIVO = 'mallasarica.cl';
+
     public const ROLES = ['super_admin', 'administrador', 'supervisor', 'colaborador'];
 
     public const ROLES_LABELS = [
@@ -61,9 +64,11 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'email_google',
         'telefono',
         'foto_path',
         'rol',
+        'google_id',
         'password',
     ];
 
@@ -128,5 +133,11 @@ class User extends Authenticatable
     public function esColaborador(): bool
     {
         return $this->rol === 'colaborador';
+    }
+
+    /** Regla de validación reutilizable: el email principal es siempre @mallasarica.cl. */
+    public static function reglaEmailCorporativo(): string
+    {
+        return 'ends_with:@'.self::DOMINIO_CORPORATIVO;
     }
 }

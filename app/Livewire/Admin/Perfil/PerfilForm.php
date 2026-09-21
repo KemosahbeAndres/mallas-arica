@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Perfil;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,8 @@ class PerfilForm extends Component
     public string $nombre = '';
 
     public string $email = '';
+
+    public string $emailGoogle = '';
 
     public string $telefono = '';
 
@@ -36,6 +39,7 @@ class PerfilForm extends Component
 
         $this->nombre = $usuario->name;
         $this->email = $usuario->email;
+        $this->emailGoogle = (string) $usuario->email_google;
         $this->telefono = (string) $usuario->telefono;
     }
 
@@ -45,7 +49,16 @@ class PerfilForm extends Component
 
         return [
             'nombre' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
+            'email' => [
+                'required', 'email', 'max:255',
+                User::reglaEmailCorporativo(),
+                Rule::unique('users', 'email')->ignore($usuario->id),
+            ],
+            'emailGoogle' => [
+                'nullable', 'email', 'max:255',
+                Rule::unique('users', 'email_google')->ignore($usuario->id),
+                Rule::notIn([trim($this->email)]),
+            ],
             'telefono' => ['nullable', 'string', 'max:40'],
             'passwordActual' => [$this->password !== '' ? 'required' : 'nullable', 'string', 'current_password:web'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
@@ -58,7 +71,10 @@ class PerfilForm extends Component
         return [
             'nombre.required' => 'El nombre es obligatorio.',
             'email.required' => 'El correo es obligatorio.',
+            'email.ends_with' => 'El correo principal debe ser una dirección @'.User::DOMINIO_CORPORATIVO.'.',
             'email.unique' => 'Ese correo ya está en uso por otro usuario.',
+            'emailGoogle.unique' => 'Ese correo de Google ya está vinculado a otro usuario.',
+            'emailGoogle.not_in' => 'El correo de Google debe ser distinto al correo principal.',
             'passwordActual.required' => 'Ingresa tu contraseña actual para definir una nueva.',
             'passwordActual.current_password' => 'La contraseña actual no es correcta.',
             'password.confirmed' => 'La confirmación de contraseña no coincide.',
@@ -82,6 +98,7 @@ class PerfilForm extends Component
         $usuario->fill([
             'name' => trim($this->nombre),
             'email' => trim($this->email),
+            'email_google' => trim($this->emailGoogle) ?: null,
             'telefono' => trim($this->telefono) ?: null,
         ]);
 
