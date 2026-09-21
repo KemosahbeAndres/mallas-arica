@@ -15,4 +15,14 @@ abstract class TestCase extends BaseTestCase
     {
         return $this->get('http://admin.'.config('app.domain').$uri);
     }
+
+    /**
+     * GET al dominio público (sin subdominio admin). Usado, entre otras
+     * cosas, por el flujo de login con Google en local (ver routes/web.php:
+     * "localhost" sin subdominio es el único host que Google acepta ahí).
+     */
+    protected function getPublico(string $uri): TestResponse
+    {
+        return $this->get('http://'.config('app.domain').$uri);
+    }
 }

@@ -31,7 +31,6 @@ class GoogleLoginTest extends TestCase
         $cuenta->shouldReceive('getId')->andReturn($googleId);
 
         $driver = Mockery::mock();
-        $driver->shouldReceive('redirectUrl')->andReturnSelf();
         $driver->shouldReceive('user')->andReturn($cuenta);
 
         Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
@@ -39,21 +38,23 @@ class GoogleLoginTest extends TestCase
 
     public function test_usuario_existente_puede_entrar_con_google(): void
     {
-        // En local (config('app.domain') === 'localhost' en tests), el callback
-        // no autentica directo: redirige a un token de un solo uso que se
-        // consume ya en el host admin.localhost (ver GoogleLoginController).
+        // En local (config('app.domain') === 'localhost' en tests), el
+        // redirect() y el callback() ocurren en "localhost" sin subdominio
+        // (Google no acepta admin.localhost) — el callback no autentica
+        // directo: redirige a un token de un solo uso que se consume ya en
+        // el host admin.localhost (ver GoogleLoginController).
         $usuario = User::factory()->create(['email' => 'coli@mallasarica.cl', 'email_google' => 'coli@gmail.com']);
         $this->mockCuentaGoogle('coli@gmail.com', 'google-abc');
 
-        $respuesta = $this->getAdmin('/login/google/callback');
+        $respuesta = $this->getPublico('/auth/google/callback');
         $respuesta->assertRedirect();
-        $this->assertStringContainsString('/login/google/consumir/', $respuesta->headers->get('Location'));
+        $this->assertStringContainsString('/auth/google/consumir/', $respuesta->headers->get('Location'));
 
         $this->assertGuest();
         $this->assertSame('google-abc', $usuario->refresh()->google_id);
 
         $token = Str::afterLast($respuesta->headers->get('Location'), '/');
-        $this->getAdmin("/login/google/consumir/{$token}")->assertRedirect(route('admin.resumen'));
+        $this->getAdmin("/auth/google/consumir/{$token}")->assertRedirect(route('admin.resumen'));
 
         $this->assertAuthenticatedAs($usuario);
     }
@@ -63,13 +64,13 @@ class GoogleLoginTest extends TestCase
         User::factory()->create(['email' => 'coli@mallasarica.cl', 'email_google' => 'coli@gmail.com']);
         $this->mockCuentaGoogle('coli@gmail.com');
 
-        $respuesta = $this->getAdmin('/login/google/callback');
+        $respuesta = $this->getPublico('/auth/google/callback');
         $token = Str::afterLast($respuesta->headers->get('Location'), '/');
 
-        $this->getAdmin("/login/google/consumir/{$token}");
+        $this->getAdmin("/auth/google/consumir/{$token}");
         Auth::logout();
 
-        $this->getAdmin("/login/google/consumir/{$token}")
+        $this->getAdmin("/auth/google/consumir/{$token}")
             ->assertRedirect(route('admin.login'))
             ->assertSessionHasErrors('email');
 
@@ -80,7 +81,7 @@ class GoogleLoginTest extends TestCase
     {
         $this->mockCuentaGoogle('desconocido@gmail.com');
 
-        $this->getAdmin('/login/google/callback')
+        $this->getPublico('/auth/google/callback')
             ->assertRedirect(route('admin.login'))
             ->assertSessionHasErrors('email');
 
@@ -97,7 +98,7 @@ class GoogleLoginTest extends TestCase
         ]);
         $this->mockCuentaGoogle('coli@gmail.com', 'otro-id');
 
-        $this->getAdmin('/login/google/callback');
+        $this->getPublico('/auth/google/callback');
 
         $this->assertSame('original', $usuario->refresh()->google_id);
     }
@@ -107,6 +108,6 @@ class GoogleLoginTest extends TestCase
         Configuracion::guardar('google_oauth.client_id', null);
         Configuracion::guardar('google_oauth.client_secret', null);
 
-        $this->getAdmin('/login/google')->assertStatus(503);
+        $this->getPublico('/auth/google')->assertStatus(503);
     }
 }

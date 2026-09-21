@@ -20,11 +20,20 @@ $dominio = config('app.domain');
 
 // Panel admin, aislado en su propio subdominio (admin.{APP_DOMAIN}). Los
 // nombres de ruta (admin.*) no cambian, solo el host que los sirve.
-Route::domain('admin.'.$dominio)->name('admin.')->group(function () {
+Route::domain('admin.'.$dominio)->name('admin.')->group(function () use ($dominio) {
     Route::middleware('guest')->get('/login', Login::class)->name('login');
-    Route::middleware('guest')->get('/login/google', [GoogleLoginController::class, 'redirect'])->name('login.google');
-    Route::middleware('guest')->get('/login/google/callback', [GoogleLoginController::class, 'callback'])->name('login.google.callback');
-    Route::middleware('guest')->get('/login/google/consumir/{token}', [GoogleLoginController::class, 'consumirToken'])->name('login.google.consumir');
+
+    // En local, todo el intercambio con Google (redirect + callback) ocurre
+    // en el dominio "localhost" sin subdominio — ver el grupo de abajo y la
+    // nota en GoogleLoginController. En dev/staging/prod es directo aquí mismo.
+    // Prefijo /auth/google (no /login/google): así quedó registrado el
+    // redirect URI en Google Cloud Console.
+    if ($dominio !== 'localhost') {
+        Route::middleware('guest')->get('/auth/google', [GoogleLoginController::class, 'redirect'])->name('login.google');
+        Route::middleware('guest')->get('/auth/google/callback', [GoogleLoginController::class, 'callback'])->name('login.google.callback');
+    }
+
+    Route::middleware('guest')->get('/auth/google/consumir/{token}', [GoogleLoginController::class, 'consumirToken'])->name('login.google.consumir');
 
     Route::middleware('auth')->group(function () {
         Route::get('/', fn () => redirect()->route('admin.resumen'));
@@ -82,12 +91,18 @@ Route::domain($dominio)->group(function () use ($dominio) {
     Route::view('/', 'landing')->name('home');
 
     // Google no acepta "admin.localhost" como redirect URI de OAuth (solo
-    // "localhost" pelado o un dominio HTTPS real) — en local únicamente,
-    // este endpoint sin subdominio delega al mismo controlador que
-    // admin.login.google.callback. No existe en dev/prod: ahí el dominio
-    // real (mallas.tinorte.cl / mallasarica.cl) sí sirve como redirect URI.
+    // "localhost" pelado o un dominio HTTPS real) — en local, todo el
+    // intercambio con Google (el salto inicial Y el callback) ocurre en
+    // este dominio sin subdominio. El botón de /login en admin.localhost
+    // enlaza aquí en vez de llamar directo al controlador. No existe en
+    // dev/prod: ahí el dominio real (mallas.tinorte.cl / mallasarica.cl)
+    // sí sirve como redirect URI y el flujo es directo en admin.*.
+    // Prefijo /auth/google (no /login/google): así quedó registrado el
+    // redirect URI en Google Cloud Console (http://localhost:8000/auth/google/callback).
     if ($dominio === 'localhost') {
-        Route::get('/login/google/callback', [GoogleLoginController::class, 'callback'])
+        Route::get('/auth/google', [GoogleLoginController::class, 'redirect'])
+            ->name('login.google.local');
+        Route::get('/auth/google/callback', [GoogleLoginController::class, 'callback'])
             ->name('login.google.callback.local');
     }
 

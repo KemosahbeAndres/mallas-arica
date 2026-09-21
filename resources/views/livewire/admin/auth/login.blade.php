@@ -53,7 +53,7 @@
     </div>
 
     <a
-        href="{{ route('admin.login.google') }}"
+        href="{{ config('app.domain') === 'localhost' ? route('login.google.local') : route('admin.login.google') }}"
         class="flex w-full items-center justify-center gap-2 rounded-lg border border-line px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-cream-deep"
     >
         <svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">

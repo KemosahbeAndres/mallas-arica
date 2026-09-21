@@ -20,12 +20,16 @@ use Laravel\Socialite\Facades\Socialite;
  * dominio corporativo, distinto del correo personal usado para el SSO).
  *
  * Solo en local (config('app.domain') === 'localhost'): Google no acepta
- * "admin.localhost" como redirect URI, así que el callback real ocurre en
- * "localhost" (sin subdominio, ver routes/web.php) y de ahí se reenvía a
- * "admin.localhost" con un token de un solo uso — la cookie de sesión de
- * Laravel es por host exacto, así que no se puede autenticar directo en el
- * dominio equivocado. En dev/staging/prod el dominio real ya sirve como
- * redirect URI, así que el flujo es directo sin este paso extra.
+ * "admin.localhost" ni como origen ni como redirect URI de OAuth, así que
+ * TODO el intercambio (el salto inicial `redirect()` Y el `callback()`)
+ * ocurre en "localhost" sin subdominio (ver routes/web.php: rutas
+ * `login.google.local` / `login.google.callback.local`, y el botón de
+ * /login que enlaza ahí en vez de a admin.login.google). Al terminar, se
+ * reenvía a "admin.localhost" con un token de un solo uso — la cookie de
+ * sesión de Laravel es por host exacto, así que no se puede autenticar
+ * directo en el dominio equivocado. En dev/staging/prod el dominio real ya
+ * sirve como origen y redirect URI, así que el flujo es directo en
+ * admin.{dominio}, sin este paso extra.
  */
 class GoogleLoginController extends Controller
 {
@@ -35,18 +39,14 @@ class GoogleLoginController extends Controller
     {
         $this->configurarDriver($config);
 
-        return Socialite::driver('google')
-            ->redirectUrl($this->callbackUrl())
-            ->redirect();
+        return Socialite::driver('google')->redirect();
     }
 
     public function callback(GoogleOAuthConfig $config): RedirectResponse
     {
         $this->configurarDriver($config);
 
-        $cuentaGoogle = Socialite::driver('google')
-            ->redirectUrl($this->callbackUrl())
-            ->user();
+        $cuentaGoogle = Socialite::driver('google')->user();
 
         $usuario = User::where('email_google', $cuentaGoogle->getEmail())->first();
 
@@ -104,6 +104,7 @@ class GoogleLoginController extends Controller
         config(['services.google' => [
             'client_id' => $config->clientId(),
             'client_secret' => $config->clientSecret(),
+            'redirect' => $this->callbackUrl(),
         ]]);
     }
 }
