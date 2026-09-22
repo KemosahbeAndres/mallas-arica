@@ -63,4 +63,11 @@ class MiAgendaTest extends TestCase
         Livewire::test(MiAgenda::class)->assertDontSee('Nuevo evento');
         $this->assertFalse(method_exists(MiAgenda::class, 'guardarEvento'));
     }
+
+    public function test_sin_google_calendar_conectado_no_muestra_seccion_de_google(): void
+    {
+        $this->actuarComoUsuario('colaborador');
+
+        Livewire::test(MiAgenda::class)->assertDontSee('De tu Google Calendar');
+    }
 }

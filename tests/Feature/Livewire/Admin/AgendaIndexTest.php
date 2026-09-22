@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Admin;
 
+use App\Jobs\SincronizarEventoGoogle;
 use App\Livewire\Admin\Agenda\AgendaIndex;
 use App\Models\Cliente;
 use App\Models\Evento;
@@ -9,6 +10,7 @@ use App\Models\Trabajo;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use Tests\TestCase;
 use Tests\Traits\ActuaComoAdmin;
@@ -17,10 +19,12 @@ class AgendaIndexTest extends TestCase
 {
     use ActuaComoAdmin, RefreshDatabase;
 
+    protected User $admin;
+
     protected function setUp(): void
     {
         parent::setUp();
-        $this->actuarComoAdmin();
+        $this->admin = $this->actuarComoAdmin();
         Carbon::setTestNow('2026-09-07 12:00:00');
     }
 
@@ -61,6 +65,56 @@ class AgendaIndexTest extends TestCase
         $this->assertTrue($evento->todo_el_dia);
     }
 
+    public function test_guardar_evento_exige_al_menos_un_usuario_asignado(): void
+    {
+        Livewire::test(AgendaIndex::class)
+            ->call('nuevoEvento', '2026-09-15')
+            ->set('titulo', 'Instalación balcón')
+            ->set('hora', '10:30')
+            ->set('usuarios_ids', [])
+            ->call('guardarEvento')
+            ->assertHasErrors('usuarios_ids');
+
+        $this->assertDatabaseCount('eventos', 0);
+    }
+
+    public function test_guardar_evento_asigna_usuarios_y_encola_sincronizacion(): void
+    {
+        Bus::fake();
+        $colaborador = User::factory()->rol('colaborador')->create();
+
+        Livewire::test(AgendaIndex::class)
+            ->call('nuevoEvento', '2026-09-15')
+            ->set('titulo', 'Instalación balcón')
+            ->set('hora', '10:30')
+            ->set('usuarios_ids', [$this->admin->id, $colaborador->id])
+            ->call('guardarEvento')
+            ->assertHasNoErrors();
+
+        $evento = Evento::firstWhere('titulo', 'Instalación balcón');
+        $this->assertSame(
+            [$this->admin->id, $colaborador->id],
+            $evento->usuarios()->pluck('users.id')->sort()->values()->all()
+        );
+        Bus::assertDispatched(SincronizarEventoGoogle::class, fn ($job) => $job->evento->is($evento));
+    }
+
+    public function test_eliminar_evento_encola_sincronizacion(): void
+    {
+        Bus::fake();
+        $evento = Evento::create([
+            'titulo' => 'Temporal',
+            'tipo' => 'oficina',
+            'inicio' => '2026-09-12 09:00:00',
+        ]);
+
+        Livewire::test(AgendaIndex::class)
+            ->call('editarEvento', $evento->id)
+            ->call('eliminarEvento');
+
+        Bus::assertDispatched(SincronizarEventoGoogle::class, fn ($job) => $job->evento->is($evento));
+    }
+
     public function test_titulo_es_obligatorio(): void
     {
         Livewire::test(AgendaIndex::class)
@@ -85,6 +139,7 @@ class AgendaIndexTest extends TestCase
             ->assertSet('titulo', 'Original')
             ->set('titulo', 'Editado')
             ->set('estado', 'hecho')
+            ->set('usuarios_ids', [$this->admin->id])
             ->call('guardarEvento')
             ->assertHasNoErrors();
 

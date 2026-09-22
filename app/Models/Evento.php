@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -30,7 +31,7 @@ class Evento extends Model
         'cliente_id',
         'ubicacion',
         'notas',
-        'google_event_id',
+        'google_event_ids',
     ];
 
     protected function casts(): array
@@ -39,6 +40,7 @@ class Evento extends Model
             'inicio' => 'datetime',
             'fin' => 'datetime',
             'todo_el_dia' => 'boolean',
+            'google_event_ids' => 'array',
         ];
     }
 
@@ -51,6 +53,25 @@ class Evento extends Model
     public function trabajo(): HasOne
     {
         return $this->hasOne(Trabajo::class);
+    }
+
+    /**
+     * Usuarios asignados a este evento (siempre al menos 1, editable a mano
+     * desde Agenda — no queda acoplado a `trabajo.colaboradores`, aunque el
+     * form los pre-llena ahí cuando el evento viene de agendar una OT).
+     * Cada uno con Google Calendar conectado recibe una copia espejo del
+     * evento en su propio calendario personal — ver el Job
+     * SincronizarEventoGoogle.
+     */
+    public function usuarios(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'evento_usuario');
+    }
+
+    /** ID del evento espejo en el Google Calendar de un usuario, si existe. */
+    public function googleEventIdDe(int $userId): ?string
+    {
+        return $this->google_event_ids[$userId] ?? null;
     }
 
     public function scopeEntre(Builder $query, \DateTimeInterface $desde, \DateTimeInterface $hasta): Builder

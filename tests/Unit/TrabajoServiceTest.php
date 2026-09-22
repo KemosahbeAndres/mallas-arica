@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Exceptions\TrabajoTransicionInvalidaException;
+use App\Jobs\SincronizarEventoGoogle;
 use App\Models\Cliente;
 use App\Models\Evento;
 use App\Models\Trabajo;
@@ -11,6 +12,7 @@ use App\Models\User;
 use App\Services\TrabajoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
 
 class TrabajoServiceTest extends TestCase
@@ -113,6 +115,46 @@ class TrabajoServiceTest extends TestCase
 
         $this->assertNull($this->ot->refresh()->evento_id);
         $this->assertSoftDeleted('eventos', ['id' => $evento->id]);
+    }
+
+    public function test_agendar_asigna_los_colaboradores_de_la_ot_al_evento_y_encola_sincronizacion(): void
+    {
+        Bus::fake();
+        $c1 = User::factory()->rol('colaborador')->create();
+        $c2 = User::factory()->rol('colaborador')->create();
+        $this->ot->colaboradores()->attach([$c1->id, $c2->id]);
+
+        $evento = $this->service->agendar($this->ot, '2026-09-20', '10:30');
+
+        $this->assertSame(
+            [$c1->id, $c2->id],
+            $evento->usuarios()->pluck('users.id')->sort()->values()->all()
+        );
+        Bus::assertDispatched(SincronizarEventoGoogle::class, fn ($job) => $job->evento->is($evento));
+    }
+
+    public function test_asignar_colaboradores_resincroniza_el_evento_ya_agendado(): void
+    {
+        $c1 = User::factory()->rol('colaborador')->create();
+        $c2 = User::factory()->rol('colaborador')->create();
+        $this->ot->colaboradores()->attach($c1);
+        $evento = $this->service->agendar($this->ot, '2026-09-20', '10:30');
+
+        Bus::fake();
+        $this->service->asignarColaboradores($this->ot->refresh(), [$c2->id]);
+
+        $this->assertSame([$c2->id], $evento->usuarios()->pluck('users.id')->all());
+        Bus::assertDispatched(SincronizarEventoGoogle::class, fn ($job) => $job->evento->is($evento));
+    }
+
+    public function test_desagendar_encola_sincronizacion_para_borrar_los_espejos(): void
+    {
+        $evento = $this->service->agendar($this->ot, '2026-09-20', '10:00');
+
+        Bus::fake();
+        $this->service->desagendar($this->ot->refresh());
+
+        Bus::assertDispatched(SincronizarEventoGoogle::class, fn ($job) => $job->evento->is($evento));
     }
 
     public function test_colaborador_no_puede_cambiar_a_pendiente(): void

@@ -28,3 +28,21 @@
         <p class="text-ink-soft px-4 py-6 text-center text-sm">No tienes trabajos asignados.</p>
     @endforelse
 </div>
+
+@if ($this->eventosGoogle->isNotEmpty())
+    <div class="mt-6">
+        <p class="text-ink-soft text-xs font-semibold tracking-wide uppercase">De tu Google Calendar</p>
+        <p class="text-ink-soft/70 mt-0.5 text-xs">Solo informativo — no son trabajos de Mallas Arica.</p>
+
+        <div class="border-line divide-line mt-2 divide-y overflow-hidden rounded-lg border bg-white">
+            @foreach ($this->eventosGoogle as $evento)
+                <div class="flex items-center justify-between gap-3 px-4 py-3">
+                    <span class="text-ink-soft text-sm">{{ $evento['titulo'] }}</span>
+                    <span class="text-ink-soft/70 shrink-0 text-xs">
+                        {{ $evento['inicio'] ? FechaEsp::corto($evento['inicio']) : '' }}
+                    </span>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
