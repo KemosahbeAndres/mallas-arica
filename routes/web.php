@@ -90,6 +90,12 @@ Route::domain('admin.'.$dominio)->name('admin.')->group(function () use ($domini
 Route::domain($dominio)->group(function () use ($dominio) {
     Route::view('/', 'landing')->name('home');
 
+    // Requisito de Google para publicar el consent screen (scope sensible
+    // de Calendar, ver GoogleLoginController): política de privacidad y
+    // términos públicos, enlazados también desde el footer.
+    Route::view('/privacidad', 'legal.privacidad')->name('legal.privacidad');
+    Route::view('/terminos', 'legal.terminos')->name('legal.terminos');
+
     // Google no acepta "admin.localhost" como redirect URI de OAuth (solo
     // "localhost" pelado o un dominio HTTPS real) — en local, todo el
     // intercambio con Google (el salto inicial Y el callback) ocurre en

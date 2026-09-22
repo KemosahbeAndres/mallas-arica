@@ -24,14 +24,20 @@ class GoogleLoginTest extends TestCase
         Configuracion::guardar('google_oauth.client_secret', 'test-client-secret');
     }
 
-    private function mockCuentaGoogle(string $email, string $googleId = 'google-123'): void
+    private function mockCuentaGoogle(string $email, string $googleId = 'google-123', ?string $refreshToken = 'refresh-token-test'): void
     {
         $cuenta = Mockery::mock(SocialiteUser::class);
         $cuenta->shouldReceive('getEmail')->andReturn($email);
         $cuenta->shouldReceive('getId')->andReturn($googleId);
+        $cuenta->token = 'access-token-test';
+        $cuenta->refreshToken = $refreshToken;
+        $cuenta->expiresIn = 3600;
 
         $driver = Mockery::mock();
+        $driver->shouldReceive('scopes')->andReturnSelf();
+        $driver->shouldReceive('with')->andReturnSelf();
         $driver->shouldReceive('user')->andReturn($cuenta);
+        $driver->shouldReceive('redirect')->andReturn(redirect('https://accounts.google.com/o/oauth2/auth'));
 
         Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
     }
@@ -109,5 +115,46 @@ class GoogleLoginTest extends TestCase
         Configuracion::guardar('google_oauth.client_secret', null);
 
         $this->getPublico('/auth/google')->assertStatus(503);
+    }
+
+    public function test_guarda_tokens_de_calendar_al_entrar(): void
+    {
+        $usuario = User::factory()->create(['email' => 'coli@mallasarica.cl', 'email_google' => 'coli@gmail.com']);
+        $this->mockCuentaGoogle('coli@gmail.com', refreshToken: 'refresh-nuevo');
+
+        $this->getPublico('/auth/google/callback');
+
+        $usuario->refresh();
+        $this->assertSame('access-token-test', $usuario->google_token);
+        $this->assertSame('refresh-nuevo', $usuario->google_refresh_token);
+        $this->assertNotNull($usuario->google_token_expires_at);
+    }
+
+    public function test_sin_refresh_token_y_sin_uno_guardado_reintenta_forzando_consentimiento(): void
+    {
+        User::factory()->create(['email' => 'coli@mallasarica.cl', 'email_google' => 'coli@gmail.com']);
+        // Google no reenvía refresh_token si el usuario ya había autorizado el
+        // scope antes sin forzar prompt=consent — el controller debe detectar
+        // que no hay uno guardado y reintentar una vez, no fallar ni loopear.
+        $this->mockCuentaGoogle('coli@gmail.com', refreshToken: null);
+
+        $respuesta = $this->getPublico('/auth/google/callback');
+
+        $respuesta->assertRedirect('https://accounts.google.com/o/oauth2/auth');
+        $this->assertGuest();
+    }
+
+    public function test_no_pierde_refresh_token_existente_si_google_no_lo_reenvia(): void
+    {
+        $usuario = User::factory()->create([
+            'email' => 'coli@mallasarica.cl',
+            'email_google' => 'coli@gmail.com',
+            'google_refresh_token' => 'refresh-viejo',
+        ]);
+        $this->mockCuentaGoogle('coli@gmail.com', refreshToken: null);
+
+        $this->getPublico('/auth/google/callback');
+
+        $this->assertSame('refresh-viejo', $usuario->refresh()->google_refresh_token);
     }
 }

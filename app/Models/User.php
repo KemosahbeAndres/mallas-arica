@@ -69,6 +69,9 @@ class User extends Authenticatable
         'foto_path',
         'rol',
         'google_id',
+        'google_token',
+        'google_refresh_token',
+        'google_token_expires_at',
         'password',
     ];
 
@@ -92,7 +95,16 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'google_token' => 'encrypted',
+            'google_refresh_token' => 'encrypted',
+            'google_token_expires_at' => 'datetime',
         ];
+    }
+
+    /** El usuario ya autorizó el scope de Calendar y tiene refresh token utilizable. */
+    public function tieneGoogleCalendarConectado(): bool
+    {
+        return filled($this->google_refresh_token);
     }
 
     public function getFotoUrlAttribute(): ?string
