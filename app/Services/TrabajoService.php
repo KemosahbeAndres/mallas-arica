@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\TrabajoTransicionInvalidaException;
+use App\Jobs\SincronizarEventoGoogle;
 use App\Models\Evento;
 use App\Models\Trabajo;
 use App\Models\User;
@@ -62,11 +63,15 @@ class TrabajoService
 
     /**
      * Crea (o actualiza) el evento de agenda asociado a la OT. La OT apunta al
-     * evento vía `trabajos.evento_id`, no al revés (CLAUDE.md §11 ter).
+     * evento vía `trabajos.evento_id`, no al revés (CLAUDE.md §11 ter). Los
+     * usuarios asignados al evento se pre-llenan con los colaboradores de la
+     * OT (`trabajo.colaboradores`) — editable después a mano desde Agenda,
+     * sin quedar acoplado. Dispara la sincronización con Google Calendar de
+     * cada usuario asignado que lo tenga conectado.
      */
     public function agendar(Trabajo $trabajo, string $fecha, ?string $hora, ?string $notas = null): Evento
     {
-        return DB::transaction(function () use ($trabajo, $fecha, $hora, $notas) {
+        $evento = DB::transaction(function () use ($trabajo, $fecha, $hora, $notas) {
             $todoElDia = blank($hora);
             $inicio = $todoElDia
                 ? CarbonImmutable::createFromFormat('Y-m-d', $fecha)->startOfDay()
@@ -87,15 +92,29 @@ class TrabajoService
 
             $trabajo->update(['evento_id' => $evento->id]);
 
+            $idsColaboradores = $trabajo->colaboradores()->pluck('users.id')->all();
+            if ($idsColaboradores !== []) {
+                $evento->usuarios()->sync($idsColaboradores);
+            }
+
             return $evento;
         });
+
+        SincronizarEventoGoogle::dispatch($evento);
+
+        return $evento;
     }
 
     public function desagendar(Trabajo $trabajo): void
     {
         $evento = $trabajo->evento;
         $trabajo->update(['evento_id' => null]);
-        $evento?->delete();
+
+        if ($evento) {
+            $evento->update(['estado' => 'cancelado']);
+            SincronizarEventoGoogle::dispatch($evento);
+            $evento->delete();
+        }
     }
 
     /**
@@ -103,10 +122,21 @@ class TrabajoService
      * asignación anterior (no acumula). Solo debe invocarse desde puntos ya
      * autorizados (Agenda) — no revalida el rol del llamador aquí.
      *
+     * Si la OT ya tiene un evento agendado, sus usuarios asignados se
+     * reemplazan por la misma lista (mismo criterio que agendar()) y se
+     * dispara la resincronización con Google Calendar.
+     *
      * @param  array<int, int>  $userIds
      */
     public function asignarColaboradores(Trabajo $trabajo, array $userIds): void
     {
         $trabajo->colaboradores()->sync($userIds);
+
+        $evento = $trabajo->evento;
+
+        if ($evento && $userIds !== []) {
+            $evento->usuarios()->sync($userIds);
+            SincronizarEventoGoogle::dispatch($evento);
+        }
     }
 }

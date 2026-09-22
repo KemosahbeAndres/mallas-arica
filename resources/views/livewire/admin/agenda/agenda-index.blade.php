@@ -245,6 +245,24 @@
                         <textarea wire:model="notas" rows="2" placeholder="Notas"
                             class="border-line focus:border-brand-red-ui w-full rounded-lg border px-3 py-2 text-sm"></textarea>
 
+                        <div>
+                            <label class="text-ink-soft text-xs font-semibold">Usuarios asignados</label>
+                            <p class="text-ink-soft/70 mt-0.5 text-xs">
+                                Cada uno con Google Calendar conectado verá este evento en su propio calendario.
+                            </p>
+                            <div class="border-line mt-1 flex max-h-32 flex-col gap-1 overflow-y-auto rounded-lg border p-2">
+                                @forelse ($this->usuariosDisponibles as $usuario)
+                                    <label class="flex items-center gap-2 text-sm">
+                                        <input type="checkbox" wire:model="usuarios_ids" value="{{ $usuario->id }}">
+                                        {{ $usuario->name }}
+                                    </label>
+                                @empty
+                                    <p class="text-ink-soft text-xs">No hay usuarios creados todavía.</p>
+                                @endforelse
+                            </div>
+                            @error('usuarios_ids') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
                         <div class="mt-1 flex items-center justify-between">
                             <button type="submit"
                                 class="bg-brand-red-ui hover:bg-brand-red-dark rounded-lg px-4 py-2 text-sm font-semibold text-white">

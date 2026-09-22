@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Agenda;
 
+use App\Jobs\SincronizarEventoGoogle;
 use App\Models\Cliente;
 use App\Models\Evento;
 use App\Models\Trabajo;
@@ -53,6 +54,14 @@ class AgendaIndex extends Component
 
     public string $notas = '';
 
+    /** Usuarios asignados al evento (al menos 1). Se pre-llena con los
+     *  colaboradores de la OT al agendar, pero es editable a mano — no
+     *  queda acoplado a trabajo.colaboradores.
+     *
+     * @var array<int, int>
+     */
+    public array $usuarios_ids = [];
+
     // --- Agendar una OT pendiente (usa TrabajoService::agendar) ---
     public ?int $agendandoTrabajoId = null;
 
@@ -81,6 +90,8 @@ class AgendaIndex extends Component
             'cliente_id' => ['nullable', 'exists:clientes,id'],
             'ubicacion' => ['nullable', 'string', 'max:255'],
             'notas' => ['nullable', 'string', 'max:2000'],
+            'usuarios_ids' => ['required', 'array', 'min:1'],
+            'usuarios_ids.*' => ['exists:users,id'],
         ];
     }
 
@@ -90,6 +101,8 @@ class AgendaIndex extends Component
             'titulo.required' => 'El título es obligatorio.',
             'fecha.required' => 'La fecha es obligatoria.',
             'hora.required_if' => 'Indica la hora, o marca "todo el día".',
+            'usuarios_ids.required' => 'Asigna al menos un usuario responsable del evento.',
+            'usuarios_ids.min' => 'Asigna al menos un usuario responsable del evento.',
         ];
     }
 
@@ -138,6 +151,14 @@ class AgendaIndex extends Component
     public function colaboradoresDisponibles(): Collection
     {
         return User::query()->where('rol', 'colaborador')->orderBy('name')->get(['id', 'name']);
+    }
+
+    /** Todo el staff del panel — para asignar responsables a cualquier evento
+     *  (no solo OT, que usan colaboradoresDisponibles()). */
+    #[Computed]
+    public function usuariosDisponibles(): Collection
+    {
+        return User::query()->orderBy('name')->get(['id', 'name']);
     }
 
     /**
@@ -226,12 +247,13 @@ class AgendaIndex extends Component
         $this->resetForm();
         $this->fecha = $fecha ?? CarbonImmutable::now()->format('Y-m-d');
         $this->hora = '09:00';
+        $this->usuarios_ids = [auth()->id()];
         $this->mostrandoForm = true;
     }
 
     public function editarEvento(int $id): void
     {
-        $evento = Evento::findOrFail($id);
+        $evento = Evento::with('usuarios:id')->findOrFail($id);
 
         $this->editandoId = $evento->id;
         $this->titulo = $evento->titulo;
@@ -244,6 +266,7 @@ class AgendaIndex extends Component
         $this->cliente_id = $evento->cliente_id;
         $this->ubicacion = (string) $evento->ubicacion;
         $this->notas = (string) $evento->notas;
+        $this->usuarios_ids = $evento->usuarios->pluck('id')->all();
         $this->flash = null;
         $this->resetValidation();
         $this->mostrandoForm = true;
@@ -257,7 +280,7 @@ class AgendaIndex extends Component
             ? CarbonImmutable::createFromFormat('Y-m-d', $datos['fecha'])->startOfDay()
             : CarbonImmutable::createFromFormat('Y-m-d H:i', $datos['fecha'].' '.$datos['hora']);
 
-        Evento::updateOrCreate(
+        $evento = Evento::updateOrCreate(
             ['id' => $this->editandoId],
             [
                 'titulo' => trim($datos['titulo']),
@@ -273,6 +296,9 @@ class AgendaIndex extends Component
             ],
         );
 
+        $evento->usuarios()->sync($datos['usuarios_ids']);
+        SincronizarEventoGoogle::dispatch($evento);
+
         $this->mes = $inicio->format('Y-m');
         $this->limpiarComputadas();
         $this->mostrandoForm = false;
@@ -283,7 +309,14 @@ class AgendaIndex extends Component
     public function eliminarEvento(): void
     {
         if ($this->editandoId) {
-            Evento::whereKey($this->editandoId)->delete();
+            $evento = Evento::find($this->editandoId);
+
+            if ($evento) {
+                $evento->update(['estado' => 'cancelado']);
+                SincronizarEventoGoogle::dispatch($evento);
+                $evento->delete();
+            }
+
             $this->limpiarComputadas();
             $this->flash = 'Evento eliminado.';
         }
@@ -302,7 +335,7 @@ class AgendaIndex extends Component
     {
         $this->reset([
             'editandoId', 'titulo', 'descripcion', 'tipo', 'estado',
-            'fecha', 'hora', 'todo_el_dia', 'cliente_id', 'ubicacion', 'notas',
+            'fecha', 'hora', 'todo_el_dia', 'cliente_id', 'ubicacion', 'notas', 'usuarios_ids',
         ]);
         $this->tipo = 'terreno';
         $this->estado = 'agendado';
