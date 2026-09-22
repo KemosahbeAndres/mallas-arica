@@ -37,6 +37,11 @@ class CotizacionesIndex extends Component
 
     public bool $todoElDiaAgendar = false;
 
+    public function mount(): void
+    {
+        abort_unless(auth()->user()->puedeGestionarClientesYCotizaciones(), 403);
+    }
+
     public function updatingEstadoFiltro(): void
     {
         $this->resetPage();
@@ -195,6 +200,7 @@ class CotizacionesIndex extends Component
     public function eliminar(): void
     {
         if ($this->detalle) {
+            abort_unless(auth()->user()->puedeEliminar(), 403);
             $this->detalle->delete();
             $this->seleccionada = null;
             unset($this->detalle, $this->cotizaciones);

@@ -113,4 +113,52 @@ class ClienteHistorialTest extends TestCase
             ->assertSee('Sin dirección asignada')
             ->assertSee('OT suelta');
     }
+
+    public function test_colaborador_no_puede_acceder_a_la_ficha_de_cliente(): void
+    {
+        $this->actuarComoUsuario('colaborador');
+
+        Livewire::test(ClienteHistorial::class, ['clienteId' => $this->cliente->id])->assertForbidden();
+    }
+
+    public function test_supervisor_puede_cambiar_estado_y_agendar_ot(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+
+        Livewire::test(ClienteHistorial::class, ['clienteId' => $this->cliente->id])
+            ->call('editarOt', $this->ot->id)
+            ->set('otEstado', 'en_curso')
+            ->call('guardarOt')
+            ->assertHasNoErrors();
+
+        $this->assertSame('en_curso', $this->ot->refresh()->estado);
+    }
+
+    public function test_supervisor_puede_editar_cantidad_ventanas_y_balcones(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+
+        Livewire::test(ClienteHistorial::class, ['clienteId' => $this->cliente->id])
+            ->call('editarOt', $this->ot->id)
+            ->set('otCantidadVentanas', 3)
+            ->set('otCantidadBalcones', 1)
+            ->call('guardarOt')
+            ->assertHasNoErrors();
+
+        $this->ot->refresh();
+        $this->assertSame(3, $this->ot->cantidad_ventanas);
+        $this->assertSame(1, $this->ot->cantidad_balcones);
+    }
+
+    public function test_guardar_ot_bloquea_ejecutada_sin_minimo_de_fotos(): void
+    {
+        Livewire::test(ClienteHistorial::class, ['clienteId' => $this->cliente->id])
+            ->call('editarOt', $this->ot->id)
+            ->set('otEstado', 'ejecutada')
+            ->set('otCantidadVentanas', 2)
+            ->call('guardarOt')
+            ->assertHasErrors('otEstado');
+
+        $this->assertSame('pendiente', $this->ot->refresh()->estado);
+    }
 }

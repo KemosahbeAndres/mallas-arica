@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Resumen;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
 use App\Models\Evento;
+use App\Models\Trabajo;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
@@ -109,8 +110,47 @@ class ResumenIndex extends Component
         return (int) round((($actual - $anterior) / $anterior) * 100);
     }
 
+    /** OT asignadas al colaborador autenticado, agendadas para hoy. */
+    #[Computed]
+    public function miTrabajoHoy(): Collection
+    {
+        $hoy = CarbonImmutable::now();
+
+        return $this->misOtDelRango($hoy->startOfDay(), $hoy->endOfDay());
+    }
+
+    /** OT asignadas al colaborador autenticado, agendadas esta semana. */
+    #[Computed]
+    public function misTrabajosSemana(): Collection
+    {
+        $hoy = CarbonImmutable::now();
+
+        return $this->misOtDelRango(
+            $hoy->startOfWeek(CarbonImmutable::MONDAY),
+            $hoy->endOfWeek(CarbonImmutable::SUNDAY),
+        );
+    }
+
+    private function misOtDelRango(CarbonImmutable $desde, CarbonImmutable $hasta): Collection
+    {
+        return Trabajo::query()
+            ->with(['cliente:id,nombre', 'clienteDireccion:id,direccion', 'evento'])
+            ->whereHas('colaboradores', fn ($q) => $q->where('users.id', auth()->id()))
+            ->whereHas('evento', fn ($q) => $q->whereBetween('inicio', [$desde, $hasta]))
+            ->orderBy('created_at')
+            ->get();
+    }
+
     public function render()
     {
+        if (auth()->user()->esColaborador()) {
+            return view('livewire.admin.resumen.resumen-colaborador')
+                ->layout('components.layouts.admin', [
+                    'title' => 'Resumen',
+                    'subtitle' => 'Tus trabajos de hoy y de esta semana',
+                ]);
+        }
+
         return view('livewire.admin.resumen.resumen-index')
             ->layout('components.layouts.admin', [
                 'title' => 'Resumen',

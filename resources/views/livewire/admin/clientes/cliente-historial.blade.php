@@ -61,6 +61,10 @@
                         </div>
 
                         <div class="mt-2 flex flex-wrap gap-2">
+                            <a href="{{ route('admin.trabajos.show', $ot) }}" wire:navigate
+                                class="border-line hover:bg-cream-deep rounded-lg border px-2.5 py-1 text-xs font-semibold">
+                                Ver ficha / fotos
+                            </a>
                             <button type="button" wire:click="editarOt({{ $ot->id }})"
                                 class="border-line hover:bg-cream-deep rounded-lg border px-2.5 py-1 text-xs font-semibold">
                                 Editar estado
@@ -84,7 +88,7 @@
 
                         {{-- Editor de estado inline --}}
                         @if ($editandoOtId === $ot->id)
-                            <div class="border-line bg-cream-deep/30 mt-3 grid gap-2 rounded-lg border p-3 sm:grid-cols-[9rem_9rem_7rem_auto]">
+                            <div class="border-line bg-cream-deep/30 mt-3 grid gap-2 rounded-lg border p-3 sm:grid-cols-[9rem_9rem_7rem_6rem_6rem_auto]">
                                 <label class="text-ink-soft text-xs font-semibold">
                                     Estado
                                     <select wire:model="otEstado" class="border-line mt-1 w-full rounded-lg border px-2 py-1.5 text-sm">
@@ -101,6 +105,14 @@
                                     Meses mantención
                                     <input type="number" min="0" max="120" wire:model="otMesesMantencion" class="border-line mt-1 w-full rounded-lg border px-2 py-1.5 text-sm">
                                 </label>
+                                <label class="text-ink-soft text-xs font-semibold">
+                                    Ventanas
+                                    <input type="number" min="0" max="200" wire:model="otCantidadVentanas" class="border-line mt-1 w-full rounded-lg border px-2 py-1.5 text-sm">
+                                </label>
+                                <label class="text-ink-soft text-xs font-semibold">
+                                    Balcones
+                                    <input type="number" min="0" max="200" wire:model="otCantidadBalcones" class="border-line mt-1 w-full rounded-lg border px-2 py-1.5 text-sm">
+                                </label>
                                 <div class="flex items-end gap-2">
                                     <button type="button" wire:click="guardarOt"
                                         class="bg-brand-red-ui hover:bg-brand-red-dark rounded-lg px-3 py-1.5 text-xs font-semibold text-white">Guardar</button>
@@ -108,6 +120,7 @@
                                         class="text-ink-soft px-2 py-1.5 text-xs">Cancelar</button>
                                 </div>
                                 @error('otFecha') <p class="col-span-full text-xs text-red-600">{{ $message }}</p> @enderror
+                                @error('otEstado') <p class="col-span-full text-xs text-red-600">{{ $message }}</p> @enderror
                             </div>
                         @endif
 

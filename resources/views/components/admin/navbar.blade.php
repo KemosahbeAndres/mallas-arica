@@ -1,16 +1,27 @@
 @php
+    $esColaborador = auth()->user()->esColaborador();
+
     $links = [
         ['route' => 'admin.resumen', 'label' => 'Resumen', 'pattern' => 'admin.resumen'],
-        [
+    ];
+
+    if (! $esColaborador) {
+        $links[] = [
             'label' => 'Cotizar',
             'pattern' => 'admin.cotizaciones*|admin.clientes',
             'children' => [
                 ['route' => 'admin.cotizaciones', 'label' => 'Cotizaciones', 'pattern' => 'admin.cotizaciones*', 'params' => []],
                 ['route' => 'admin.clientes', 'label' => 'Clientes', 'pattern' => 'admin.clientes', 'params' => []],
             ],
-        ],
-        ['route' => 'admin.agenda', 'label' => 'Agenda', 'pattern' => 'admin.agenda'],
-        [
+        ];
+    }
+
+    $links[] = $esColaborador
+        ? ['route' => 'admin.agenda.mia', 'label' => 'Agenda', 'pattern' => 'admin.agenda.mia']
+        : ['route' => 'admin.agenda', 'label' => 'Agenda', 'pattern' => 'admin.agenda'];
+
+    if (auth()->user()->esSuperAdmin() || auth()->user()->rol === 'administrador') {
+        $links[] = [
             'label' => 'Sitio web',
             'pattern' => 'admin.sitio-web',
             'children' => [
@@ -18,8 +29,12 @@
                 ['route' => 'admin.sitio-web', 'params' => ['tab' => 'imagenes'], 'label' => 'Imágenes', 'tab' => 'imagenes'],
                 ['route' => 'admin.sitio-web', 'params' => ['tab' => 'faq'], 'label' => 'FAQ', 'tab' => 'faq'],
             ],
-        ],
-    ];
+        ];
+    }
+
+    if (auth()->user()->gestionaUsuarios()) {
+        $links[] = ['route' => 'admin.usuarios', 'label' => 'Usuarios', 'pattern' => 'admin.usuarios'];
+    }
 
     $activo = fn (?string $pattern) => $pattern && request()->routeIs(...explode('|', $pattern));
 
@@ -104,18 +119,47 @@
                 Ver sitio ↗
             </a>
 
-            <div class="flex items-center gap-2.5">
-                <span class="bg-brand-red-ui flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white">
-                    {{ mb_substr(auth()->user()->name, 0, 1) }}
-                </span>
-                <span class="hidden leading-tight sm:block">
-                    <span class="block text-xs font-semibold text-white">{{ auth()->user()->name }}</span>
-                    <span class="text-cream-deep/60 block text-[10px]">Administrador</span>
-                </span>
-                <form method="POST" action="{{ route('admin.logout') }}" class="ml-1">
-                    @csrf
-                    <button type="submit" class="text-cream-deep/60 text-xs hover:text-white">Salir</button>
-                </form>
+            <div x-data="{ open: false }" class="relative" x-on:click.outside="open = false">
+                <button type="button" x-on:click="open = !open" class="flex items-center gap-2.5">
+                    @if (auth()->user()->foto_url)
+                        <img src="{{ auth()->user()->foto_url }}" alt="" class="h-8 w-8 rounded-full object-cover">
+                    @else
+                        <span class="bg-brand-red-ui flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white">
+                            {{ mb_substr(auth()->user()->name, 0, 1) }}
+                        </span>
+                    @endif
+                    <span class="hidden leading-tight sm:block">
+                        <span class="block text-xs font-semibold text-white">{{ auth()->user()->name }}</span>
+                        <span class="text-cream-deep/60 block text-[10px]">{{ auth()->user()->rol_label }}</span>
+                    </span>
+                    <svg x-bind:class="open ? 'rotate-180' : ''" class="text-cream-deep/60 h-3 w-3 shrink-0 transition-transform" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+
+                <div
+                    x-show="open"
+                    x-cloak
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 -translate-y-1"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    x-on:click="open = false"
+                    class="border-line absolute right-0 top-full z-20 mt-2 min-w-[10rem] rounded-lg border bg-white p-1.5 shadow-lg"
+                >
+                    <a
+                        href="{{ route('admin.ajustes') }}"
+                        wire:navigate
+                        class="text-ink-soft hover:bg-cream-deep block rounded-md px-3 py-2 text-sm font-medium transition-colors"
+                    >
+                        Ajustes
+                    </a>
+                    <form method="POST" action="{{ route('admin.logout') }}">
+                        @csrf
+                        <button type="submit" class="text-ink-soft hover:bg-cream-deep block w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors">
+                            Cerrar sesión
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

@@ -298,6 +298,20 @@
                         @error('agendaHora') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
 
+                    <div>
+                        <label class="text-ink-soft text-xs font-semibold">Colaboradores asignados</label>
+                        <div class="border-line mt-1 flex max-h-32 flex-col gap-1 overflow-y-auto rounded-lg border p-2">
+                            @forelse ($this->colaboradoresDisponibles as $colaborador)
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" wire:model="agendaColaboradores" value="{{ $colaborador->id }}">
+                                    {{ $colaborador->name }}
+                                </label>
+                            @empty
+                                <p class="text-ink-soft text-xs">No hay colaboradores creados todavía.</p>
+                            @endforelse
+                        </div>
+                    </div>
+
                     <button type="button" wire:click="confirmarAgendarTrabajo"
                         class="bg-brand-red-ui hover:bg-brand-red-dark mt-1 rounded-lg px-4 py-2 text-sm font-semibold text-white">
                         Confirmar agenda

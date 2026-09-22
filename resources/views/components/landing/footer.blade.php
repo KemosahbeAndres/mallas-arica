@@ -47,5 +47,11 @@
                 © {{ now()->year }} Mallas Arica Jacob. Todos los derechos reservados.
             </p>
         </div>
+
+        <div class="border-white/10 mt-8 flex flex-col items-center gap-2 border-t pt-6 text-xs text-white/50 sm:flex-row sm:justify-center sm:gap-4">
+            <a href="{{ route('legal.privacidad') }}" class="hover:text-white">Política de Privacidad</a>
+            <span class="hidden sm:inline">·</span>
+            <a href="{{ route('legal.terminos') }}" class="hover:text-white">Términos y Condiciones</a>
+        </div>
     </div>
 </footer>

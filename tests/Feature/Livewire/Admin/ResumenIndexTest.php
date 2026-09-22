@@ -6,6 +6,8 @@ use App\Livewire\Admin\Resumen\ResumenIndex;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
 use App\Models\Evento;
+use App\Models\Trabajo;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
@@ -136,5 +138,41 @@ class ResumenIndexTest extends TestCase
     public function test_raiz_del_admin_redirige_a_resumen(): void
     {
         $this->getAdmin('/')->assertRedirect(route('admin.resumen'));
+    }
+
+    public function test_administrador_sigue_viendo_el_dashboard_completo(): void
+    {
+        Livewire::test(ResumenIndex::class)
+            ->assertSee('Ticket promedio')
+            ->assertDontSee('No tienes trabajos agendados');
+    }
+
+    public function test_colaborador_ve_resumen_reducido_con_sus_trabajos_de_hoy(): void
+    {
+        $colaborador = $this->actuarComoUsuario('colaborador');
+        $cliente = Cliente::create(['nombre' => 'Cliente Y']);
+
+        $otHoy = Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT de hoy', 'estado' => 'pendiente']);
+        $otHoy->colaboradores()->attach($colaborador);
+        $eventoHoy = Evento::create(['titulo' => 'OT de hoy', 'tipo' => 'terreno', 'inicio' => '2026-09-15 09:00:00']);
+        $otHoy->update(['evento_id' => $eventoHoy->id]);
+
+        Livewire::test(ResumenIndex::class)
+            ->assertSee('OT de hoy')
+            ->assertDontSee('Ticket promedio');
+    }
+
+    public function test_colaborador_no_ve_trabajos_de_otro_colaborador_en_resumen(): void
+    {
+        $colaborador = $this->actuarComoUsuario('colaborador');
+        $otro = User::factory()->rol('colaborador')->create();
+        $cliente = Cliente::create(['nombre' => 'Cliente Z']);
+
+        $otAjena = Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT ajena', 'estado' => 'pendiente']);
+        $otAjena->colaboradores()->attach($otro);
+        $evento = Evento::create(['titulo' => 'OT ajena', 'tipo' => 'terreno', 'inicio' => '2026-09-15 09:00:00']);
+        $otAjena->update(['evento_id' => $evento->id]);
+
+        Livewire::test(ResumenIndex::class)->assertDontSee('OT ajena');
     }
 }

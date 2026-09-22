@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Agenda;
 use App\Models\Cliente;
 use App\Models\Evento;
 use App\Models\Trabajo;
+use App\Models\User;
 use App\Services\TrabajoService;
 use App\Support\FechaEsp;
 use Carbon\CarbonImmutable;
@@ -59,6 +60,9 @@ class AgendaIndex extends Component
 
     public string $agendaHora = '';
 
+    /** @var array<int, int> */
+    public array $agendaColaboradores = [];
+
     // --- Modal "Conectar con otro calendario" (Opciones) ---
     public bool $mostrandoConectarCalendario = false;
 
@@ -91,6 +95,14 @@ class AgendaIndex extends Component
 
     public function mount(): void
     {
+        if (auth()->user()->esColaborador()) {
+            $this->redirect(route('admin.agenda.mia'), navigate: true);
+
+            return;
+        }
+
+        abort_unless(auth()->user()->puedeAgendarYAsignarTrabajos(), 403);
+
         if (! preg_match('/^\d{4}-\d{2}$/', $this->mes)) {
             $this->mes = CarbonImmutable::now()->format('Y-m');
         }
@@ -120,6 +132,12 @@ class AgendaIndex extends Component
     public function clientes(): Collection
     {
         return Cliente::query()->orderBy('nombre')->get(['id', 'nombre']);
+    }
+
+    #[Computed]
+    public function colaboradoresDisponibles(): Collection
+    {
+        return User::query()->where('rol', 'colaborador')->orderBy('name')->get(['id', 'name']);
     }
 
     /**
@@ -295,19 +313,24 @@ class AgendaIndex extends Component
 
     public function abrirAgendarTrabajo(int $trabajoId): void
     {
+        $trabajo = Trabajo::findOrFail($trabajoId);
+
         $this->agendandoTrabajoId = $trabajoId;
         $this->agendaFecha = CarbonImmutable::now()->format('Y-m-d');
         $this->agendaHora = '09:00';
+        $this->agendaColaboradores = $trabajo->colaboradores->pluck('id')->all();
         $this->resetValidation();
     }
 
     public function cerrarAgendarTrabajo(): void
     {
-        $this->reset(['agendandoTrabajoId', 'agendaFecha', 'agendaHora']);
+        $this->reset(['agendandoTrabajoId', 'agendaFecha', 'agendaHora', 'agendaColaboradores']);
     }
 
     public function confirmarAgendarTrabajo(TrabajoService $service): void
     {
+        abort_unless(auth()->user()->puedeAgendarYAsignarTrabajos(), 403);
+
         $this->validate([
             'agendaFecha' => ['required', 'date'],
             'agendaHora' => ['nullable', 'date_format:H:i'],
@@ -315,6 +338,7 @@ class AgendaIndex extends Component
 
         $trabajo = Trabajo::findOrFail($this->agendandoTrabajoId);
         $evento = $service->agendar($trabajo, $this->agendaFecha, $this->agendaHora ?: null);
+        $service->asignarColaboradores($trabajo, $this->agendaColaboradores);
 
         $this->mes = $evento->inicio->format('Y-m');
         $this->limpiarComputadas();

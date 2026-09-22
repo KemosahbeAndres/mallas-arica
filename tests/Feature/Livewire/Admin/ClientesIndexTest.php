@@ -114,4 +114,61 @@ class ClientesIndexTest extends TestCase
             ->assertOk()
             ->assertSet('seleccionado', null);
     }
+
+    public function test_colaborador_no_puede_acceder_a_clientes(): void
+    {
+        $this->actuarComoUsuario('colaborador');
+
+        Livewire::test(ClientesIndex::class)->assertForbidden();
+    }
+
+    public function test_supervisor_puede_crear_y_editar_cliente(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+
+        Livewire::test(ClientesIndex::class)
+            ->call('nuevo')
+            ->set('nombre', 'Cliente Supervisor')
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('clientes', ['nombre' => 'Cliente Supervisor']);
+    }
+
+    public function test_supervisor_no_puede_eliminar_cliente(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+        $cliente = Cliente::create(['nombre' => 'Intocable']);
+
+        Livewire::test(ClientesIndex::class)
+            ->call('seleccionar', $cliente->id)
+            ->call('eliminar')
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('clientes', ['id' => $cliente->id]);
+    }
+
+    public function test_supervisor_no_puede_quitar_direccion_persistida(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+        $cliente = Cliente::create(['nombre' => 'Con Direccion']);
+        $cliente->direcciones()->create(['direccion' => 'Calle 1']);
+
+        Livewire::test(ClientesIndex::class)
+            ->call('seleccionar', $cliente->id)
+            ->call('quitarDireccion', 0)
+            ->assertForbidden();
+    }
+
+    public function test_administrador_puede_eliminar_cliente(): void
+    {
+        $this->actuarComoUsuario('administrador');
+        $cliente = Cliente::create(['nombre' => 'Temporal']);
+
+        Livewire::test(ClientesIndex::class)
+            ->call('seleccionar', $cliente->id)
+            ->call('eliminar');
+
+        $this->assertSoftDeleted('clientes', ['id' => $cliente->id]);
+    }
 }

@@ -124,4 +124,27 @@ class CotizacionFormTest extends TestCase
         $this->assertSame('Nueva', $cotizacion->items->first()->descripcion);
         $this->assertSame(5000, $cotizacion->items->first()->subtotal);
     }
+
+    public function test_supervisor_puede_crear_cotizacion(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+        $cliente = Cliente::create(['nombre' => 'X']);
+
+        Livewire::test(CotizacionForm::class)
+            ->set('clienteId', $cliente->id)
+            ->set('items.0.descripcion', 'Línea')
+            ->set('items.0.precio_unitario', 10000)
+            ->set('items.0.cantidad', 1)
+            ->call('guardar')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('cotizaciones', ['cliente_id' => $cliente->id]);
+    }
+
+    public function test_colaborador_no_puede_acceder_al_formulario(): void
+    {
+        $this->actuarComoUsuario('colaborador');
+
+        Livewire::test(CotizacionForm::class)->assertForbidden();
+    }
 }

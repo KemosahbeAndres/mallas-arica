@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Clientes;
 
+use App\Exceptions\TrabajoTransicionInvalidaException;
 use App\Models\Cliente;
 use App\Models\Trabajo;
 use App\Services\TrabajoService;
@@ -28,6 +29,10 @@ class ClienteHistorial extends Component
 
     public int $otMesesMantencion = 12;
 
+    public int $otCantidadVentanas = 0;
+
+    public int $otCantidadBalcones = 0;
+
     // Sub-form de agenda.
     public ?int $agendandoOtId = null;
 
@@ -36,6 +41,13 @@ class ClienteHistorial extends Component
     public string $agendaHora = '09:00';
 
     public ?string $flash = null;
+
+    public function mount(int $clienteId): void
+    {
+        abort_unless(auth()->user()->puedeGestionarClientesYCotizaciones(), 403);
+
+        $this->clienteId = $clienteId;
+    }
 
     #[Computed]
     public function cliente(): Cliente
@@ -69,6 +81,8 @@ class ClienteHistorial extends Component
         $this->otEstado = $ot->estado;
         $this->otFecha = $ot->finalizado_at?->format('Y-m-d') ?? CarbonImmutable::now()->format('Y-m-d');
         $this->otMesesMantencion = $ot->meses_mantencion;
+        $this->otCantidadVentanas = $ot->cantidad_ventanas;
+        $this->otCantidadBalcones = $ot->cantidad_balcones;
         $this->agendandoOtId = null;
         $this->flash = null;
     }
@@ -84,10 +98,23 @@ class ClienteHistorial extends Component
             'otEstado' => ['required', 'in:'.implode(',', Trabajo::ESTADOS)],
             'otFecha' => ['required', 'date'],
             'otMesesMantencion' => ['integer', 'min:0', 'max:120'],
+            'otCantidadVentanas' => ['integer', 'min:0', 'max:200'],
+            'otCantidadBalcones' => ['integer', 'min:0', 'max:200'],
         ]);
 
-        $ot->update(['meses_mantencion' => $this->otMesesMantencion]);
-        $trabajos->cambiarEstado($ot, $this->otEstado, $this->otFecha);
+        $ot->update([
+            'meses_mantencion' => $this->otMesesMantencion,
+            'cantidad_ventanas' => $this->otCantidadVentanas,
+            'cantidad_balcones' => $this->otCantidadBalcones,
+        ]);
+
+        try {
+            $trabajos->cambiarEstado($ot, $this->otEstado, $this->otFecha, auth()->user());
+        } catch (TrabajoTransicionInvalidaException $e) {
+            $this->addError('otEstado', $e->getMessage());
+
+            return;
+        }
 
         $this->editandoOtId = null;
         unset($this->cliente, $this->otPorDireccion);
@@ -101,6 +128,8 @@ class ClienteHistorial extends Component
 
     public function abrirAgenda(int $id): void
     {
+        abort_unless(auth()->user()->puedeAgendarYAsignarTrabajos(), 403);
+
         $ot = $this->cliente->trabajos->firstWhere('id', $id);
         if (! $ot) {
             return;
@@ -115,6 +144,8 @@ class ClienteHistorial extends Component
 
     public function guardarAgenda(TrabajoService $trabajos): void
     {
+        abort_unless(auth()->user()->puedeAgendarYAsignarTrabajos(), 403);
+
         $ot = Trabajo::find($this->agendandoOtId);
         if (! $ot || $ot->cliente_id !== $this->clienteId) {
             return;
@@ -134,6 +165,8 @@ class ClienteHistorial extends Component
 
     public function desagendar(int $id, TrabajoService $trabajos): void
     {
+        abort_unless(auth()->user()->puedeAgendarYAsignarTrabajos(), 403);
+
         $ot = Trabajo::find($id);
         if ($ot && $ot->cliente_id === $this->clienteId) {
             $trabajos->desagendar($ot);

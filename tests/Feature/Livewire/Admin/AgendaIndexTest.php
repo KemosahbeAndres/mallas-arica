@@ -6,6 +6,7 @@ use App\Livewire\Admin\Agenda\AgendaIndex;
 use App\Models\Cliente;
 use App\Models\Evento;
 use App\Models\Trabajo;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
@@ -193,5 +194,70 @@ class AgendaIndexTest extends TestCase
 
         $pendientes = Livewire::test(AgendaIndex::class)->instance()->pendientesPorAgendar();
         $this->assertFalse($pendientes->pluck('titulo')->contains('OT sin agendar'));
+    }
+
+    public function test_colaborador_es_redirigido_a_mi_agenda(): void
+    {
+        $this->actuarComoUsuario('colaborador');
+
+        Livewire::test(AgendaIndex::class)->assertRedirect(route('admin.agenda.mia'));
+    }
+
+    public function test_supervisor_puede_agendar_un_trabajo(): void
+    {
+        $this->actuarComoUsuario('supervisor');
+        $cliente = Cliente::create(['nombre' => 'Cliente OT']);
+        $trabajo = Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT sin agendar', 'estado' => 'pendiente']);
+
+        Livewire::test(AgendaIndex::class)
+            ->call('abrirAgendarTrabajo', $trabajo->id)
+            ->set('agendaFecha', '2026-09-15')
+            ->set('agendaHora', '10:00')
+            ->call('confirmarAgendarTrabajo')
+            ->assertHasNoErrors();
+
+        $this->assertNotNull($trabajo->refresh()->evento_id);
+    }
+
+    public function test_confirmar_agendar_trabajo_asigna_colaboradores(): void
+    {
+        $colaborador = User::factory()->rol('colaborador')->create();
+        $cliente = Cliente::create(['nombre' => 'Cliente OT']);
+        $trabajo = Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT', 'estado' => 'pendiente']);
+
+        Livewire::test(AgendaIndex::class)
+            ->call('abrirAgendarTrabajo', $trabajo->id)
+            ->set('agendaFecha', '2026-09-15')
+            ->set('agendaColaboradores', [$colaborador->id])
+            ->call('confirmarAgendarTrabajo')
+            ->assertHasNoErrors();
+
+        $this->assertSame([$colaborador->id], $trabajo->colaboradores()->pluck('users.id')->all());
+    }
+
+    public function test_reasignar_colaboradores_sin_reagendar_no_cambia_la_fecha(): void
+    {
+        $c1 = User::factory()->rol('colaborador')->create();
+        $c2 = User::factory()->rol('colaborador')->create();
+        $cliente = Cliente::create(['nombre' => 'Cliente OT']);
+        $trabajo = Trabajo::create(['cliente_id' => $cliente->id, 'titulo' => 'OT', 'estado' => 'pendiente']);
+
+        Livewire::test(AgendaIndex::class)
+            ->call('abrirAgendarTrabajo', $trabajo->id)
+            ->set('agendaFecha', '2026-09-15')
+            ->set('agendaColaboradores', [$c1->id])
+            ->call('confirmarAgendarTrabajo');
+
+        $eventoId = $trabajo->refresh()->evento_id;
+
+        Livewire::test(AgendaIndex::class)
+            ->call('abrirAgendarTrabajo', $trabajo->id)
+            ->assertSet('agendaColaboradores', [$c1->id])
+            ->set('agendaColaboradores', [$c2->id])
+            ->call('confirmarAgendarTrabajo');
+
+        $trabajo->refresh();
+        $this->assertSame($eventoId, $trabajo->evento_id);
+        $this->assertSame([$c2->id], $trabajo->colaboradores()->pluck('users.id')->all());
     }
 }

@@ -95,10 +95,12 @@
                                 <input type="text" wire:model="direcciones.{{ $indice }}.etiqueta" placeholder="Etiqueta (opcional)"
                                     class="border-line focus:border-brand-red-ui focus:ring-brand-red-ui/20 w-full rounded-lg border px-3 py-2 text-sm focus:ring">
                             </div>
-                            <button type="button" wire:click="quitarDireccion({{ $indice }})"
-                                class="text-ink-soft shrink-0 rounded-lg p-2 text-sm hover:bg-red-50 hover:text-red-600" title="Quitar">
-                                ✕
-                            </button>
+                            @if (! $dir['id'] || auth()->user()->puedeEliminar())
+                                <button type="button" wire:click="quitarDireccion({{ $indice }})"
+                                    class="text-ink-soft shrink-0 rounded-lg p-2 text-sm hover:bg-red-50 hover:text-red-600" title="Quitar">
+                                    ✕
+                                </button>
+                            @endif
                         </div>
                     @empty
                         <p class="text-ink-soft text-sm">Sin direcciones registradas.</p>
@@ -114,7 +116,7 @@
                     <span wire:loading wire:target="guardar">Guardando…</span>
                 </button>
 
-                @if ($seleccionado)
+                @if ($seleccionado && auth()->user()->puedeEliminar())
                     <button type="button" wire:click="eliminar" wire:confirm="¿Eliminar este cliente? Sus direcciones también se quitan."
                         class="text-ink-soft rounded-lg px-3 py-2 text-sm hover:bg-red-50 hover:text-red-600">
                         Eliminar cliente

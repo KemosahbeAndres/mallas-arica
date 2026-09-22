@@ -140,10 +140,12 @@
                             class="border-line hover:bg-cream-deep flex-1 rounded-lg border px-3 py-2 text-center text-sm font-semibold">
                             Editar
                         </a>
-                        <button type="button" wire:click="eliminar" wire:confirm="¿Eliminar esta cotización?"
-                            class="text-ink-soft rounded-lg px-3 py-2 text-sm hover:bg-red-50 hover:text-red-600">
-                            Eliminar
-                        </button>
+                        @if (auth()->user()->puedeEliminar())
+                            <button type="button" wire:click="eliminar" wire:confirm="¿Eliminar esta cotización?"
+                                class="text-ink-soft rounded-lg px-3 py-2 text-sm hover:bg-red-50 hover:text-red-600">
+                                Eliminar
+                            </button>
+                        @endif
                     </div>
                 </div>
             @else
