@@ -333,7 +333,10 @@ deploy/.env.production.example     # plantilla del .env de producción
 | 11 | ✅ **Dashboard Resumen** (`/admin/resumen`, home del admin): 4 KPIs + "trabajos de esta semana" (de `eventos`) + "últimas cotizaciones" — ver §11 sexies | **cerrado**, `php artisan test` (120) y `pint --test` verdes |
 | 12 | ✅ **Rediseño de Cotizaciones** — ver §11 septies. Se **eliminó** el motor de cálculo automático completo (cotizador público, `CotizacionCalculatorService`, tarifas, catálogos `tipos_*`, `tramos_altura`, `visitas`). El formulario del sitio crea un `Cliente`. Cotizaciones internas con ítems libres, estados `borrador→generada→aceptada→rechazada`, folio, PDF adaptado. Al aceptar → se crea la **OT** (`trabajos`) | El dueño arma una cotización a mano, la acepta y se crea la orden de trabajo — **cerrado**, `php artisan test` (96) y `pint --test` verdes |
 | 13 | ✅ **Ficha de Cliente completa** — ver §11 octies. OT agrupadas por dirección con editor de estado / fecha de ejecución / meses de mantención + alerta "Mantención vencida"; cotizaciones relacionadas (lectura); **agendar la OT** (`trabajos.evento_id` → crea un `Evento`, `TrabajoService::agendar`). `trabajos` gana `cliente_direccion_id` | El dueño marca una OT como ejecutada, ve la alerta de mantención y la agenda en el calendario — **cerrado**, `php artisan test` (109) y `pint --test` verdes |
-| 14–16 | CRM restante: sincronización con Google Calendar (necesita credenciales OAuth); gestión de OT en su propia sección si el volumen lo pide; indicador de estado por cliente en la lista. Diseño: `diseño/dashboard-v1.pdf` | Ver desglose cuando se aborde cada uno |
+| 14 | ✅ **Login con Google (SSO admin) + sincronización con Google Calendar** — ver §11 nonies. Scope `calendar.events` sobre el login existente, tokens por usuario (`users.google_token`/`google_refresh_token`), `GoogleCalendarService`, Job `SincronizarEventoGoogle` (cola). Todo `Evento` gana usuarios asignados (`evento_usuario`, editable a mano); cada uno con Calendar conectado recibe una copia espejo en su calendario personal. `MiAgenda` del colaborador suma sus eventos personales de Google como referencia. Páginas públicas `/privacidad` y `/terminos` (requisito de Google para el consent screen con scope sensible) | El dueño conecta su cuenta, agenda una OT con un colaborador y el evento aparece en el Google Calendar de ambos — **cerrado**, `php artisan test` (242) y `pint --test` verdes. **Pendiente de configuración externa**: agregar test users en Google Cloud Console mientras el consent screen esté en modo Testing (ver §11 nonies) |
+| 15 | ⏳ **Confirmación de asistencia + disponibilidad de colaboradores** — ver §11 decies (pendiente, sin implementar, solo diseñado) | Ver criterio de cierre en §11 decies cuando se aborde |
+| 16 | ⏳ **Galería / librería de medios — mejoras pedidas por el dueño** — ver §11 undecies (pendiente, sin implementar, solo diseñado): descarga individual y en lote, reordenar más allá de ↑/↓, álbumes publicados visibles en la landing, feedback de carga (preview/progreso/modal), vista con sidebar tipo Lightroom | Ver criterio de cierre en §11 undecies cuando se aborde |
+| 17 | CRM restante: gestión de OT en su propia sección si el volumen lo pide; indicador de estado por cliente en la lista. Diseño: `diseño/dashboard-v1.pdf` | Ver desglose cuando se aborde |
 | Final | Editor de páginas por bloques avanzado (ex-Sprint 5b, ver §11), al estilo WordPress + Otter Blocks — **última pieza del roadmap, después de todo el CRM** | Página editada por bloques desde el panel se refleja en el sitio sin deploy |
 
 > **Nota sobre el modelo de negocio (post-Sprint 12):** el dueño cotiza **siempre a mano** en el panel. El motor de cálculo automático (`CotizacionCalculatorService`, `tarifas`, catálogos) se **eliminó**. Los precios de referencia por m² de la sección "Tipos de Malla" son **contenido informativo** hardcodeado, no alimentan nada.
@@ -474,3 +477,97 @@ Flujo de negocio, de principio a fin:
   - `desagendar($ot)` — desliga y soft-borra el evento.
 - **Sin indicador de color** por cliente en la lista (decisión del dueño — se define después).
 - **Tests:** `TrabajoServiceTest` (7) + `ClienteHistorialTest` (6). `php artisan test` **109 en verde**, `pint --test` verde, `migrate:fresh --seed` OK.
+
+### 11 nonies. Sprint 14 — Login con Google + sincronización con Google Calendar (implementado)
+
+**Login con Google (base, previa a este sprint):** `App\Http\Controllers\Auth\GoogleLoginController` + `App\Services\GoogleOAuthConfig` — credenciales OAuth (`client_id`/`client_secret`) gestionadas por el super_admin en `/admin/ajustes` → tabla `configuraciones` (cifrada), no en `.env`. **No auto-registra**: el callback busca `User::where('email_google', ...)`; si no existe, rechaza — el alta del usuario (con su `email_google`) es manual en `/admin/usuarios`. Dominio dual en local (`localhost` sin subdominio para el intercambio OAuth, token de un solo uso para saltar a `admin.localhost`) documentado en el propio controller.
+
+**Ampliación para Calendar (este sprint):**
+- El login pide siempre el scope `https://www.googleapis.com/auth/calendar.events`, junto con los scopes básicos — no hay un flujo de "conectar Calendar" separado del login.
+- `access_type=offline` siempre (no muestra pantalla extra); `prompt=consent` (si la muestra) **se omite por defecto** para que el login sea silencioso una vez autorizado. Si Google no devuelve `refresh_token` (primera vez, o el usuario revocó el acceso) y no había uno guardado, el callback reintenta una única vez forzando `prompt=consent` (guard en sesión evita loop).
+- `users` gana `google_token` / `google_refresh_token` / `google_token_expires_at` (los dos primeros con cast `encrypted`). `User::tieneGoogleCalendarConectado()` = `filled(google_refresh_token)`.
+- **`App\Services\GoogleCalendarService`** — recibe `User` + `GoogleOAuthConfig` (mismo patrón de credenciales que el login, no `config('services.google.*')`, que no se puebla de forma estática en este proyecto). `createEvent`/`updateEvent`/`deleteEvent`/`listEvents` sobre el calendario `primary` del usuario, con refresh automático de token expirado. Paquete `google/apiclient`.
+
+**Modelo de datos — todo `Evento` tiene usuarios asignados:**
+- Tabla `evento_usuario` (many-to-many, análoga a `trabajo_usuario`) — **editable siempre a mano** desde el formulario de Agenda, independiente de si el evento viene de una OT o no. Al agendar una OT (`TrabajoService::agendar()`) se pre-llena con `trabajo.colaboradores`, pero no queda acoplado: un supervisor puede agregar/quitar gente después sin afectar la asignación real de la OT. Validación: todo evento requiere al menos 1 usuario.
+- `eventos.google_event_id` (único, string, declarado en el Sprint 10 sin uso) → **reemplazado** por `google_event_ids` (JSON, mapa `{user_id: google_event_id}`) — un mismo `Evento` de la plataforma genera una copia distinta por cada usuario asignado, cada una con su propio ID en el calendario personal de ese usuario.
+
+**Sincronización — `App\Jobs\SincronizarEventoGoogle`** (en cola, mismo patrón que `NotificarNuevoCliente`):
+- Se dispara desde `AgendaIndex::guardarEvento()`/`eliminarEvento()` y desde `TrabajoService::agendar()`/`asignarColaboradores()`/`desagendar()`.
+- Por cada usuario asignado con Calendar conectado: crea o actualiza su espejo (idempotente vía `google_event_ids[user_id]`). Si un usuario deja de estar asignado, se borra su espejo. Si el evento pasa a `estado = cancelado`, se borran todos los espejos.
+- **Solo copia CRM → Google, nunca al revés.** Un colaborador no puede editar el evento ni en el panel (bloqueado por permisos, ver §11 ter) ni indirectamente vía Google (su copia es de solo lectura de facto: si la edita o borra en Google, eso no se propaga de vuelta).
+- Fallos de Google (token revocado, rate limit, red) se loguean (`Log::warning`/`failed()`) y **no bloquean** el guardado en el CRM — la fuente de verdad de la agenda sigue siendo esta plataforma, Google es una comodidad derivada.
+
+**`MiAgenda` (vista de solo lectura del colaborador):** sigue mostrando primero sus OT asignadas (la agenda de trabajo real, resaltada). Se agrega una sección "De tu Google Calendar" con sus próximos eventos personales que **no** vienen de una OT de la plataforma (se excluyen comparando contra `google_event_ids` propios) — puramente informativo, para que el colaborador detecte choques de horario con su vida personal; nunca escribe de vuelta a Google ni al CRM.
+
+**Páginas legales `/privacidad` y `/terminos`** (`resources/views/legal/`, componente `x-legal.page`): requisito de Google para publicar el consent screen con un scope sensible (`calendar.events`) — sin esto, Google bloquea el flujo con "Acceso bloqueado: app no verificada" a cualquier cuenta que no esté en la lista de test users. Enlazadas en el footer y en el `sitemap.xml`.
+
+**Configuración externa pendiente (no requiere más código):**
+- El proyecto de Google Cloud (`sigma-mallasarica`) sigue en modo **Testing** — sin Google Workspace en `mallasarica.cl` (correo personal del staff), "Internal" no está disponible, y pasar a producción con External exige Política de Privacidad + Condiciones del Servicio públicas (ya resuelto arriba) más aceptar la pantalla "app no verificada" en cada login nuevo, o completar la verificación formal de Google (días/semanas, video demo).
+- **Decisión tomada:** quedarse en Testing y agregar manualmente cada correo de Gmail del staff que use login+Calendar en OAuth consent screen → Audience → Test users (límite 100, suficiente para el tamaño del equipo). Repetir cada vez que se sume un colaborador nuevo.
+
+**Tests:** `GoogleLoginTest` (8, incluye guarda/reintento/no-pierde refresh token), `AgendaIndexTest` (+3: exige usuarios, asigna y encola, eliminar encola), `TrabajoServiceTest` (+3: agendar asigna colaboradores al evento, reasignar resincroniza, desagendar encola borrado), `SincronizarEventoGoogleTest` (4, casos sin credenciales / sin Calendar conectado / cancelado / usuario quitado — no mockea el SDK real de Google, igual criterio que `GoogleLoginController` solo mockea Socialite), `MiAgendaTest` (+1). `php artisan test` **242 en verde**, `pint --test` verde.
+
+### 11 decies. Confirmación de asistencia + disponibilidad de colaboradores (pendiente — diseñado, sin implementar)
+
+**Motivación (decisión del dueño, post-Sprint 14):** hoy una OT agendada con colaboradores asignados (§11 nonies) se sincroniza a su Google Calendar, pero nadie confirma que el colaborador puede realmente asistir. La confirmación de asistencia importa para administradores/supervisores porque una OT agendada es **un compromiso ya hecho con el cliente** — si un colaborador no puede ir, hay que saberlo con anticipación, no el día del trabajo. Los días bloqueados sirven para que un colaborador declare de antemano cuándo no está disponible (vacaciones, día libre, horario reducido), evitando que se le agende algo en esas fechas.
+
+**Alcance de este sprint, según lo pedido:** modelar ambas cosas para poder escalar después — el flujo fino de "por qué no puede ir" queda como conversación privada entre colaborador y jefatura (no hay que construir un chat ni un sistema de aprobación de excusas), pero el *estado* de confirmación sí debe quedar registrado y visible en el panel.
+
+**Modelo de datos propuesto:**
+```php
+// trabajos gana el estado de confirmación de cada colaborador asignado —
+// vive en el pivote, no en `trabajos` ni en `eventos`, porque la
+// confirmación es individual (un colaborador puede confirmar y otro no
+// para la misma OT). Ver trabajo_usuario ya existente (§11 ter).
+trabajo_usuario:  ..., estado_confirmacion(enum: pendiente|confirmado|no_disponible, default 'pendiente'),
+                  confirmado_at(null), motivo(text, null)
+                  // motivo es libre y opcional — texto corto que el
+                  // colaborador puede dejar ("tengo hora médica"), sin
+                  // reemplazar la conversación con la jefatura, ver arriba.
+
+// Días/rangos que un colaborador declara no disponible. No bloquea la
+// creación de una OT en esas fechas (eso sería impedir a la jefatura
+// agendar) — solo la señala visualmente para que decida con esa
+// información, igual criterio que "Mantención vencida" (alerta, no traba).
+disponibilidad_bloqueos: id, user_id, desde(date), hasta(date), motivo(text, null),
+                         timestamps, deleted_at
+                         // SoftDeletes — es dato de agenda personal del
+                         // colaborador, mismo criterio que `eventos`.
+```
+
+**Flujo propuesto:**
+1. Al agendar/reasignar una OT (`TrabajoService::agendar()`/`asignarColaboradores()`), cada colaborador asignado queda en `estado_confirmacion = pendiente`.
+2. Desde `MiAgenda`, el colaborador ve sus OT con un botón **Confirmar** / **No puedo ir** (con `motivo` opcional). Cambia su propia fila en `trabajo_usuario`, nunca la de otro.
+3. El panel (`AgendaIndex`, `ClienteHistorial`, `ResumenIndex`) muestra el estado de confirmación de cada colaborador junto a la OT — badge de color, igual patrón visual que los badges de estado de OT (`$estadoBadge` en las vistas actuales). Una OT con algún colaborador en `no_disponible` se resalta como "requiere atención" (no se bloquea ni cancela sola — la reasignación la hace la jefatura a mano).
+4. Al declarar un `disponibilidad_bloqueo`, si choca con una OT ya agendada para ese colaborador en ese rango, se muestra una advertencia (no bloqueante) en el panel — mismo criterio "alerta, no traba" que el resto del CRM (ej. "Mantención vencida", §11 octies).
+5. Nada de esto se sincroniza con Google Calendar por ahora — es estado interno del CRM. Si más adelante se quiere, los bloqueos de disponibilidad podrían reflejarse como eventos "ocupado" en el propio Google Calendar del colaborador, pero es una extensión posterior, no parte de este alcance.
+
+**Fuera de alcance deliberado (a definir si se prioriza):**
+- Notificar automáticamente a administradores/supervisores cuando un colaborador marca `no_disponible` (hoy: se ven al entrar al panel, sin push/email).
+- Aprobación o flujo de excusas — se resuelve en conversación privada, como pidió el dueño.
+- Bloqueo duro de agendar sobre una fecha declarada no disponible — se deja como advertencia, la decisión final la toma la jefatura.
+
+**Criterio de cierre (cuando se implemente):** un colaborador confirma o rechaza una OT desde `MiAgenda`, y un administrador ve ese estado sin salir de `/admin/agenda`; un colaborador declara un rango de días bloqueados y la jefatura ve la advertencia si intenta agendarle algo ahí.
+
+### 11 undecies. Galería / librería de medios — mejoras pedidas por el dueño (pendiente — diseñado, sin implementar)
+
+**Contexto:** la librería de medios ya no es la galería simple del Sprint 4 (§4.8, `GaleriaItem`/`GaleriaIndex`/`GaleriaForm` — esas clases y esa tabla ya no reflejan el código actual, quedaron como registro histórico igual que §4.2–4.6). El módulo vigente es `App\Livewire\Admin\Media\*` (`MediaLibrary`, `AlbumManager`, `LandingMediaSlots`) sobre los modelos `MediaItem` / `MediaAlbum`: toda imagen se sube primero a la librería central (`MediaLibrary::subir()`), luego se asigna a un álbum (`AlbumManager`) o directo a un slot de la landing (`LandingMediaSlots`, ver `LandingMediaService` y §4.1 nota de encuadre/posición). Este documento no tenía registrada esta migración — queda anotado acá de paso. Un álbum se muestra en público solo si está asignado al slot `galeria-publica` (`GaleriaMosaico`, un álbum a la vez).
+
+**Ya existe (no reimplementar):** reordenar ítems dentro de un álbum con ↑/↓ (`AlbumManager::moverArriba()`/`moverAbajo()`, swap de `orden` en transacción) y carga múltiple a un álbum (`AlbumManager::subirVarias()`, sin preview ni progreso).
+
+**Features pedidas (notas del dueño, 21-09-2026), sin implementar todavía:**
+
+1. **Descarga de imágenes (individual y en lote).** `MediaItem` ya expone `url` (`Storage::disk('public')->url()`). Individual: un link de descarga por ítem (`download` attribute o ruta que fuerce `Content-Disposition: attachment`, evitando que el navegador abra la imagen en vez de descargarla). En lote: seleccionar varios ítems (checkboxes en `MediaLibrary`/`AlbumManager`) y descargar como `.zip` generado al vuelo (`ZipArchive` sobre los paths en `storage/app/public/media/`, streamed, no debería requerir cola dado el volumen bajo de imágenes que ya asumió el proyecto al descartar R2 — ver §1, §3).
+
+2. **Reordenar imágenes en galería más allá de ↑/↓.** Reemplazar o complementar `moverArriba`/`moverAbajo` con **drag-and-drop** (Alpine/Sortable.js o `x-sort` de Livewire — evaluar cuál encaja mejor con el patrón "sin librerías JS pesadas" ya usado en el proyecto, ver criterio del lightbox de galería en §4.8 y del calendario en §11 quinquies) que llame un método `reordenar(array $idsEnOrden)` y actualice `orden` en lote (`DB::transaction`, mismo criterio que el swap actual).
+
+3. **Galería extendida — visualizar álbumes publicados.** Hoy solo se ve *un* álbum en público (el del slot `galeria-publica`). Se pide una vista donde el visitante navegue **varios álbumes marcados como públicos**. Requiere: `media_albums` gana `publicado` (bool) y quizás `orden`; una ruta/vista pública nueva (ej. `/galeria` — hoy ese path hace 301 a `/#galeria`, ver §4.10, habría que revisar ese redirect si esta vista se implementa) que liste los álbumes publicados y, al entrar a uno, sus `items`. El slot `galeria-publica` de la landing seguiría existiendo para el mosaico de la home (un álbum destacado), esta sería una vista aparte más completa.
+
+4. **Feedback visual de carga (individual y en lote).** `MediaLibrary::subir()` y `AlbumManager::subirVarias()` hoy no muestran preview ni progreso — Livewire sube el archivo y recién se ve el resultado al terminar. Se pide: previsualización de las imágenes seleccionadas antes de confirmar la carga (`URL.createObjectURL` en Alpine sobre el input file, o el evento nativo de progreso de subida de Livewire — `wire:progress` / eventos `livewire-upload-progress` ya disponibles en el framework sin librería adicional) y un **modal** dedicado para la carga (tanto individual como masiva), en vez del formulario inline actual.
+
+5. **Vista con sidebar moderna: diferenciar imágenes dentro de un álbum vs. las demás.** Hoy `AlbumManager` mezcla en la misma pantalla los álbumes (con acordeón `abrir()`/`albumAbiertoId`) y `itemsSinAlbum`. Se pide un layout con **sidebar** (lista de álbumes a la izquierda, tipo explorador de archivos/Lightroom) y el panel principal mostrando el contenido del álbum seleccionado o la librería sin asignar — reemplaza o convive con el acordeón actual. Es principalmente un rediseño de `resources/views/livewire/admin/media/album-manager.blade.php`, no de los métodos del componente.
+
+**Fuera de alcance deliberado (a definir si se prioriza):** compresión/redimensionado automático de imágenes al subir; límites de tamaño de álbum; papelera/SoftDeletes para `MediaItem`/`MediaAlbum` (hoy `eliminar()` es hard delete, igual criterio que `GaleriaIndex` del Sprint 5, ver §4.11 — no son datos de cliente).
+
+**Criterio de cierre (cuando se implemente, feature por feature):** el dueño descarga una selección de fotos de un álbum como `.zip`; reordena imágenes arrastrándolas sin usar los botones ↑/↓; un visitante navega una galería pública con más de un álbum; al subir fotos ve una vista previa y el progreso antes de que termine; y la librería de medios tiene una navegación de álbumes tipo sidebar en vez del acordeón actual.
