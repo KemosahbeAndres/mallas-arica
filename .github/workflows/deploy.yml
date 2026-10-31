@@ -107,12 +107,129 @@ jobs:
         run: php artisan test
 
   # ==========================================================
+  # 1b. VALIDAR LA IMAGEN DE PRODUCCIÓN (corre también en PRs)
+  # ==========================================================
+  # Construye el mismo Dockerfile que se despliega, sin hacer push, y lo
+  # arranca contra MariaDB/Redis reales. Así un Dockerfile roto, una
+  # extensión PHP faltante, un nginx.conf inválido o un entrypoint que no
+  # levanta se detectan en el PR y no recién al mergear a main.
+  validar-imagen:
+    name: Validar imagen Docker
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_DATABASE: appmallas_ci
+          MARIADB_USER: appmallas
+          MARIADB_PASSWORD: secret
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      IMAGE: mallas-arica:ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build (sin push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/prod/Dockerfile
+          load: true
+          push: false
+          tags: ${{ env.IMAGE }}
+          build-args: |
+            APP_VERSION=ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          pull: true
+
+      - name: Versión de PHP parchada
+        run: |
+          # Mismo umbral que la guarda del Dockerfile (CVE-2026-109618/109619).
+          # Si sale una nueva release de seguridad, subir ambos valores.
+          docker run --rm --entrypoint php "$IMAGE" -r '
+            echo "PHP " . PHP_VERSION . PHP_EOL;
+            exit(version_compare(PHP_VERSION, "8.4.27", ">=") ? 0 : 1);'
+
+      - name: Extensiones PHP requeridas
+        run: |
+          docker run --rm --entrypoint php "$IMAGE" -r '
+            $faltan = array_filter(
+              ["pdo_mysql","mbstring","bcmath","exif","pcntl","gd","zip","intl","redis","Zend OPcache"],
+              fn ($e) => ! extension_loaded($e)
+            );
+            if ($faltan) { fwrite(STDERR, "Faltan extensiones: ".implode(", ", $faltan).PHP_EOL); exit(1); }
+            echo "Extensiones OK".PHP_EOL;'
+
+      - name: Configuración de nginx y php-fpm válida
+        run: |
+          docker run --rm --entrypoint sh "$IMAGE" -c 'nginx -t && php-fpm -t'
+
+      - name: Arrancar el contenedor (entrypoint + healthcheck)
+        run: |
+          # Red del host: el contenedor llega a los services del runner por
+          # 127.0.0.1. APP_KEY es descartable, solo vive en este job.
+          docker run -d --name app --network host \
+            -e APP_ENV=production -e APP_DEBUG=false \
+            -e APP_KEY="base64:$(head -c 32 /dev/urandom | base64)" \
+            -e APP_URL=http://localhost \
+            -e DB_CONNECTION=mysql -e DB_HOST=127.0.0.1 -e DB_PORT=3306 \
+            -e DB_DATABASE=appmallas_ci -e DB_USERNAME=appmallas -e DB_PASSWORD=secret \
+            -e REDIS_HOST=127.0.0.1 -e REDIS_PORT=6379 \
+            -e CACHE_STORE=redis -e SESSION_DRIVER=redis -e QUEUE_CONNECTION=redis \
+            "$IMAGE"
+
+          for i in $(seq 1 30); do
+            if [ "$(docker inspect -f '{{.State.Running}}' app)" != "true" ]; then
+              echo "::error::El contenedor se detuvo antes de quedar sano."
+              exit 1
+            fi
+            if curl -fsS http://127.0.0.1/up >/dev/null 2>&1; then
+              echo "Healthcheck /up OK tras ~$((i * 3))s"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::/up no respondió en 90s."
+          exit 1
+
+      - name: Migraciones contra MariaDB
+        run: docker exec app php artisan migrate --force
+
+      - name: Logs del contenedor (si algo falló)
+        if: failure()
+        run: docker logs app || true
+
+  # ==========================================================
   # 2. BUILD Y PUSH A GHCR
   # ==========================================================
   build:
     name: Build y push
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, validar-imagen]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
 
     permissions:
