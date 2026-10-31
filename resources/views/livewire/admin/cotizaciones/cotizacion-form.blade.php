@@ -1,16 +1,68 @@
 @php $clp = fn ($v) => '$'.number_format((int) $v, 0, ',', '.'); @endphp
 
+<div>
 <form wire:submit="guardar" class="flex flex-col gap-4">
-    {{-- Barra de acciones: estado + guardar/cancelar --}}
-    <div class="flex items-center justify-between">
-        <label class="text-ink-soft text-sm font-semibold">
-            Estado
-            <select wire:model="estado" class="border-line ml-2 rounded-lg border px-3 py-2 text-sm">
-                @foreach (\App\Models\Cotizacion::ESTADOS as $e)
-                    <option value="{{ $e }}">{{ ucfirst($e) }}</option>
-                @endforeach
-            </select>
-        </label>
+    {{-- Barra de acciones: empresa emisora + estado + guardar/cancelar --}}
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-4">
+            {{-- Empresa emisora: dropdown para cambiar, editar o agregar --}}
+            <div x-data="{ abierto: false }" @keydown.escape.window="abierto = false" @click.outside="abierto = false" class="relative">
+                <button type="button" @click="abierto = !abierto"
+                    class="border-line hover:bg-cream-deep flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-left text-sm">
+                    <span>
+                        <span class="text-ink-soft block text-[10px] font-semibold tracking-wide uppercase">Empresa emisora</span>
+                        <span class="text-ink block font-semibold">{{ $this->empresaActual?->nombre ?? 'Sin empresa' }}</span>
+                    </span>
+                    <span class="text-ink-soft text-xs">▾</span>
+                </button>
+
+                <div x-show="abierto" x-cloak x-transition.opacity
+                    class="border-line absolute left-0 z-30 mt-1 w-72 rounded-lg border bg-white py-1 shadow-lg">
+                    @foreach ($this->empresas as $emp)
+                        <button type="button" wire:key="emp-{{ $emp->id }}"
+                            wire:click="seleccionarEmpresa({{ $emp->id }})" @click="abierto = false"
+                            class="hover:bg-cream-deep flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm">
+                            <span class="min-w-0">
+                                <span class="text-ink block truncate font-semibold">{{ $emp->nombre }}</span>
+                                @if ($emp->rut)
+                                    <span class="text-ink-soft block text-xs">RUT {{ $emp->rut }}</span>
+                                @endif
+                            </span>
+                            <span class="shrink-0 text-xs">
+                                @if ($emp->predeterminada)
+                                    <span class="text-ink-soft mr-1">predeterminada</span>
+                                @endif
+                                @if ($emp->id === $empresaId)
+                                    <span class="text-brand-red-ui font-bold">✓</span>
+                                @endif
+                            </span>
+                        </button>
+                    @endforeach
+
+                    <div class="border-line mt-1 border-t pt-1">
+                        @if ($this->empresaActual)
+                            <button type="button" wire:click="editarEmpresa" @click="abierto = false"
+                                class="hover:bg-cream-deep text-ink-soft w-full px-3 py-2 text-left text-sm">
+                                Editar «{{ $this->empresaActual->nombre }}»
+                            </button>
+                        @endif
+                        <button type="button" wire:click="nuevaEmpresa" @click="abierto = false"
+                            class="hover:bg-cream-deep text-brand-red-ui w-full px-3 py-2 text-left text-sm font-semibold">
+                            + Agregar nueva empresa
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <label class="text-ink-soft text-sm font-semibold">
+                Estado
+                <select wire:model="estado" class="border-line ml-2 rounded-lg border px-3 py-2 text-sm">
+                    @foreach (\App\Models\Cotizacion::ESTADOS as $e)
+                        <option value="{{ $e }}">{{ ucfirst($e) }}</option>
+                    @endforeach
+                </select>
+            </label>
+        </div>
 
         <div class="flex gap-2">
             <a href="{{ route('admin.cotizaciones') }}" wire:navigate
@@ -167,3 +219,53 @@
         </section>
     </div>
 </form>
+
+{{-- Modal de empresa: fuera del <form> de la cotización (los formularios no se anidan) --}}
+@if ($mostrarFormEmpresa)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" wire:key="modal-empresa"
+        @keydown.escape.window="$wire.cancelarEmpresa()">
+        <div class="max-h-full w-full max-w-lg overflow-y-auto rounded-lg bg-white p-5 shadow-xl" @click.outside="$wire.cancelarEmpresa()">
+            <h2 class="text-ink text-base font-bold tracking-tight">
+                {{ $empresaEditandoId ? 'Editar empresa' : 'Nueva empresa' }}
+            </h2>
+            <p class="text-ink-soft mt-1 text-xs">Estos datos aparecen en el encabezado y el pie del PDF de la cotización.</p>
+
+            <div class="mt-4 grid gap-3" wire:keydown.enter.prevent="guardarEmpresa">
+                <div>
+                    <input type="text" wire:model="empNombre" placeholder="Nombre de la empresa"
+                        class="border-line focus:border-brand-red-ui w-full rounded-lg border px-3 py-2 text-sm">
+                    @error('empNombre') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                <input type="text" wire:model="empSubtitulo" placeholder="Subtítulo (opcional, ej. Instalación de mallas de protección)"
+                    class="border-line focus:border-brand-red-ui w-full rounded-lg border px-3 py-2 text-sm">
+                <input type="text" wire:model="empRut" placeholder="RUT"
+                    class="border-line focus:border-brand-red-ui w-full rounded-lg border px-3 py-2 text-sm">
+                <input type="text" wire:model="empDireccion" placeholder="Dirección"
+                    class="border-line focus:border-brand-red-ui w-full rounded-lg border px-3 py-2 text-sm">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <input type="text" wire:model="empTelefono" placeholder="Teléfono"
+                        class="border-line focus:border-brand-red-ui w-full rounded-lg border px-3 py-2 text-sm">
+                    <div>
+                        <input type="email" wire:model="empEmail" placeholder="Correo"
+                            class="border-line focus:border-brand-red-ui w-full rounded-lg border px-3 py-2 text-sm">
+                        @error('empEmail') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+                <label class="text-ink-soft flex items-center gap-2 text-sm">
+                    <input type="checkbox" wire:model="empPredeterminada" class="accent-brand-red-ui">
+                    Usar como predeterminada en las cotizaciones nuevas
+                </label>
+            </div>
+
+            <div class="mt-5 flex justify-end gap-2">
+                <button type="button" wire:click="cancelarEmpresa"
+                    class="border-line hover:bg-cream-deep rounded-lg border px-4 py-2 text-sm font-semibold">Cancelar</button>
+                <button type="button" wire:click="guardarEmpresa"
+                    class="bg-brand-red-ui hover:bg-brand-red-dark rounded-lg px-5 py-2 text-sm font-semibold text-white">
+                    {{ $empresaEditandoId ? 'Guardar cambios' : 'Agregar empresa' }}
+                </button>
+            </div>
+        </div>
+    </div>
+@endif
+</div>

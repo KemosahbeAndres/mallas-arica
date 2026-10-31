@@ -4,13 +4,17 @@ namespace App\Services;
 
 use App\Models\Cotizacion;
 use App\Models\CotizacionItem;
+use App\Models\Empresa;
 use App\Support\FechaEsp;
 
 class CotizacionPdfDataBuilder
 {
     public const MENSAJE_VIGENCIA_DEFAULT = 'Esta cotización tiene una vigencia de 10 días a contar de la fecha de emisión. Los valores están expresados en pesos chilenos (CLP) e incluyen IVA según se detalla.';
 
+    /** Respaldo si no existe ninguna empresa en la tabla `empresas`. */
     public const EMPRESA = [
+        'nombre' => 'Mallas Arica Jacob',
+        'subtitulo' => 'Instalación de mallas de protección · Arica',
         'rut' => '10.610.838-2',
         'direccion' => 'Av. Diego Portales #1333, Arica',
         'telefono' => '+56 9 8645 5205',
@@ -24,7 +28,11 @@ class CotizacionPdfDataBuilder
      */
     public function construir(Cotizacion $cotizacion): array
     {
-        $cotizacion->loadMissing('items', 'cliente', 'clienteDireccion');
+        $cotizacion->loadMissing('items', 'cliente', 'clienteDireccion', 'empresa');
+
+        // Empresa elegida en la cotización; si no tiene (cotizaciones viejas
+        // o empresa borrada), la predeterminada; y como último recurso, la constante.
+        $empresa = $cotizacion->empresa ?? Empresa::predeterminada();
 
         $lineas = $cotizacion->items->map(fn (CotizacionItem $item) => [
             'descripcion' => $item->descripcion,
@@ -37,7 +45,9 @@ class CotizacionPdfDataBuilder
         return [
             'folio' => $cotizacion->folio,
             'fecha' => FechaEsp::largo($cotizacion->created_at),
-            'empresa' => self::EMPRESA,
+            'empresa' => $empresa
+                ? $empresa->only(['nombre', 'subtitulo', 'rut', 'direccion', 'telefono', 'email'])
+                : self::EMPRESA,
             'cliente' => $this->datosCliente($cotizacion),
             'lineas' => $lineas,
             'descuentoPct' => (float) $cotizacion->descuento_pct,

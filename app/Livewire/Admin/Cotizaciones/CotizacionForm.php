@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Cotizaciones;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
 use App\Models\CotizacionItem;
+use App\Models\Empresa;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -38,6 +39,28 @@ class CotizacionForm extends Component
 
     public string $estado = 'borrador';
 
+    // --- Empresa emisora ---
+    public ?int $empresaId = null;
+
+    public bool $mostrarFormEmpresa = false;
+
+    /** null = creando una empresa nueva; id = editando esa. */
+    public ?int $empresaEditandoId = null;
+
+    public string $empNombre = '';
+
+    public string $empSubtitulo = '';
+
+    public string $empRut = '';
+
+    public string $empDireccion = '';
+
+    public string $empTelefono = '';
+
+    public string $empEmail = '';
+
+    public bool $empPredeterminada = false;
+
     public function mount(?Cotizacion $cotizacion = null): void
     {
         abort_unless(auth()->user()->puedeGestionarClientesYCotizaciones(), 403);
@@ -61,6 +84,9 @@ class CotizacionForm extends Component
         if ($this->items === []) {
             $this->items = [$this->itemVacio()];
         }
+
+        // Cotización nueva (o vieja sin empresa) → la predeterminada.
+        $this->empresaId = $this->cotizacion?->empresa_id ?? Empresa::predeterminada()?->id;
     }
 
     private function itemVacio(): array
@@ -78,6 +104,7 @@ class CotizacionForm extends Component
             'nuevoEmail' => ['nullable', 'email', 'max:255'],
             'clienteDireccionId' => ['nullable', 'exists:cliente_direcciones,id'],
             'direccionLibre' => ['nullable', 'string', 'max:255'],
+            'empresaId' => ['nullable', 'exists:empresas,id'],
             'estado' => ['required', 'in:'.implode(',', Cotizacion::ESTADOS)],
             'descuentoPct' => ['numeric', 'min:0', 'max:100'],
             'items' => ['array', 'min:1'],
@@ -109,6 +136,100 @@ class CotizacionForm extends Component
             ->orderBy('nombre')
             ->limit(20)
             ->get(['id', 'nombre', 'telefono']);
+    }
+
+    #[Computed]
+    public function empresas()
+    {
+        return Empresa::query()->orderByDesc('predeterminada')->orderBy('nombre')->get();
+    }
+
+    #[Computed]
+    public function empresaActual(): ?Empresa
+    {
+        return $this->empresas->firstWhere('id', $this->empresaId);
+    }
+
+    public function seleccionarEmpresa(int $id): void
+    {
+        if ($this->empresas->contains('id', $id)) {
+            $this->empresaId = $id;
+        }
+    }
+
+    public function nuevaEmpresa(): void
+    {
+        $this->resetErrorBag();
+        $this->reset(['empresaEditandoId', 'empNombre', 'empSubtitulo', 'empRut', 'empDireccion', 'empTelefono', 'empEmail', 'empPredeterminada']);
+        $this->mostrarFormEmpresa = true;
+    }
+
+    public function editarEmpresa(): void
+    {
+        $empresa = $this->empresaActual;
+        if (! $empresa) {
+            return;
+        }
+
+        $this->resetErrorBag();
+        $this->empresaEditandoId = $empresa->id;
+        $this->empNombre = $empresa->nombre;
+        $this->empSubtitulo = (string) $empresa->subtitulo;
+        $this->empRut = (string) $empresa->rut;
+        $this->empDireccion = (string) $empresa->direccion;
+        $this->empTelefono = (string) $empresa->telefono;
+        $this->empEmail = (string) $empresa->email;
+        $this->empPredeterminada = $empresa->predeterminada;
+        $this->mostrarFormEmpresa = true;
+    }
+
+    public function cancelarEmpresa(): void
+    {
+        $this->mostrarFormEmpresa = false;
+        $this->resetErrorBag();
+    }
+
+    public function guardarEmpresa(): void
+    {
+        $this->validate([
+            'empNombre' => ['required', 'string', 'max:255'],
+            'empSubtitulo' => ['nullable', 'string', 'max:255'],
+            'empRut' => ['nullable', 'string', 'max:20'],
+            'empDireccion' => ['nullable', 'string', 'max:255'],
+            'empTelefono' => ['nullable', 'string', 'max:40'],
+            'empEmail' => ['nullable', 'email', 'max:255'],
+            'empPredeterminada' => ['boolean'],
+        ], [
+            'empNombre.required' => 'El nombre de la empresa es obligatorio.',
+        ]);
+
+        $empresa = DB::transaction(function () {
+            $empresa = $this->empresaEditandoId ? Empresa::findOrFail($this->empresaEditandoId) : new Empresa;
+
+            // La primera empresa que exista siempre es la predeterminada.
+            $predeterminada = $this->empPredeterminada || ! Empresa::where('id', '!=', $empresa->id ?? 0)->exists();
+
+            if ($predeterminada) {
+                Empresa::where('id', '!=', $empresa->id ?? 0)->update(['predeterminada' => false]);
+            }
+
+            $empresa->fill([
+                'nombre' => trim($this->empNombre),
+                'subtitulo' => trim($this->empSubtitulo) ?: null,
+                'rut' => trim($this->empRut) ?: null,
+                'direccion' => trim($this->empDireccion) ?: null,
+                'telefono' => trim($this->empTelefono) ?: null,
+                'email' => trim($this->empEmail) ?: null,
+                // Al editar sin marcar el check, se conserva su estado actual.
+                'predeterminada' => $predeterminada || ($empresa->predeterminada ?? false),
+            ])->save();
+
+            return $empresa;
+        });
+
+        unset($this->empresas, $this->empresaActual);
+        $this->empresaId = $empresa->id;
+        $this->mostrarFormEmpresa = false;
     }
 
     #[Computed]
@@ -194,6 +315,7 @@ class CotizacionForm extends Component
             $cotizacion->fill([
                 'cliente_id' => $clienteId,
                 'cliente_direccion_id' => $direccionId,
+                'empresa_id' => $datos['empresaId'],
                 'nombre' => $datos['modoCliente'] === 'nuevo' ? trim($datos['nuevoNombre']) : (Cliente::find($clienteId)?->nombre),
                 'telefono' => $datos['modoCliente'] === 'nuevo' ? trim($datos['nuevoTelefono']) : (Cliente::find($clienteId)?->telefono),
                 'email' => $datos['modoCliente'] === 'nuevo' ? (trim($datos['nuevoEmail']) ?: null) : (Cliente::find($clienteId)?->email),

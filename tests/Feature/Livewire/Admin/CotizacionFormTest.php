@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire\Admin;
 use App\Livewire\Admin\Cotizaciones\CotizacionForm;
 use App\Models\Cliente;
 use App\Models\Cotizacion;
+use App\Models\Empresa;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -123,6 +124,113 @@ class CotizacionFormTest extends TestCase
         $this->assertCount(1, $cotizacion->items);
         $this->assertSame('Nueva', $cotizacion->items->first()->descripcion);
         $this->assertSame(5000, $cotizacion->items->first()->subtotal);
+    }
+
+    public function test_cotizacion_nueva_parte_con_la_empresa_predeterminada(): void
+    {
+        $predeterminada = Empresa::predeterminada();
+        $cliente = Cliente::create(['nombre' => 'X']);
+
+        Livewire::test(CotizacionForm::class)
+            ->assertSet('empresaId', $predeterminada->id)
+            ->set('clienteId', $cliente->id)
+            ->set('items.0.descripcion', 'Línea')
+            ->set('items.0.precio_unitario', 1000)
+            ->call('guardar');
+
+        $this->assertSame($predeterminada->id, Cotizacion::first()->empresa_id);
+    }
+
+    public function test_agrega_una_empresa_nueva_y_la_deja_seleccionada(): void
+    {
+        $cliente = Cliente::create(['nombre' => 'X']);
+
+        $componente = Livewire::test(CotizacionForm::class)
+            ->call('nuevaEmpresa')
+            ->assertSet('mostrarFormEmpresa', true)
+            ->set('empNombre', 'Segunda Empresa SpA')
+            ->set('empRut', '76.123.456-7')
+            ->set('empTelefono', '+56 9 1111 2222')
+            ->set('empEmail', 'hola@segunda.cl')
+            ->call('guardarEmpresa')
+            ->assertHasNoErrors()
+            ->assertSet('mostrarFormEmpresa', false);
+
+        $nueva = Empresa::firstWhere('nombre', 'Segunda Empresa SpA');
+        $this->assertNotNull($nueva);
+        $this->assertFalse($nueva->predeterminada);
+        $componente->assertSet('empresaId', $nueva->id);
+
+        $componente
+            ->set('clienteId', $cliente->id)
+            ->set('items.0.descripcion', 'Línea')
+            ->set('items.0.precio_unitario', 1000)
+            ->call('guardar');
+
+        $this->assertSame($nueva->id, Cotizacion::first()->empresa_id);
+    }
+
+    public function test_cambia_de_empresa_con_el_selector(): void
+    {
+        $otra = Empresa::create(['nombre' => 'Otra Empresa']);
+
+        Livewire::test(CotizacionForm::class)
+            ->call('seleccionarEmpresa', $otra->id)
+            ->assertSet('empresaId', $otra->id);
+    }
+
+    public function test_el_nombre_de_la_empresa_es_obligatorio(): void
+    {
+        Livewire::test(CotizacionForm::class)
+            ->call('nuevaEmpresa')
+            ->set('empNombre', '')
+            ->call('guardarEmpresa')
+            ->assertHasErrors('empNombre');
+
+        $this->assertDatabaseCount('empresas', 1);
+    }
+
+    public function test_marcar_predeterminada_deja_una_sola(): void
+    {
+        $anterior = Empresa::predeterminada();
+
+        Livewire::test(CotizacionForm::class)
+            ->call('nuevaEmpresa')
+            ->set('empNombre', 'Nueva Predeterminada')
+            ->set('empPredeterminada', true)
+            ->call('guardarEmpresa');
+
+        $this->assertSame(1, Empresa::where('predeterminada', true)->count());
+        $this->assertSame('Nueva Predeterminada', Empresa::predeterminada()->nombre);
+        $this->assertFalse($anterior->fresh()->predeterminada);
+    }
+
+    public function test_edita_los_datos_de_la_empresa_seleccionada(): void
+    {
+        $empresa = Empresa::predeterminada();
+
+        Livewire::test(CotizacionForm::class)
+            ->call('editarEmpresa')
+            ->assertSet('empNombre', $empresa->nombre)
+            ->set('empTelefono', '+56 9 0000 0000')
+            ->call('guardarEmpresa')
+            ->assertHasNoErrors();
+
+        $empresa->refresh();
+        $this->assertSame('+56 9 0000 0000', $empresa->telefono);
+        $this->assertTrue($empresa->predeterminada);
+    }
+
+    public function test_editar_una_cotizacion_conserva_su_empresa(): void
+    {
+        $otra = Empresa::create(['nombre' => 'Otra Empresa']);
+        $cliente = Cliente::create(['nombre' => 'X']);
+        $cotizacion = Cotizacion::create([
+            'cliente_id' => $cliente->id, 'empresa_id' => $otra->id, 'nombre' => 'X', 'estado' => 'borrador',
+        ]);
+
+        Livewire::test(CotizacionForm::class, ['cotizacion' => $cotizacion])
+            ->assertSet('empresaId', $otra->id);
     }
 
     public function test_supervisor_puede_crear_cotizacion(): void

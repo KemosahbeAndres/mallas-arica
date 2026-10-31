@@ -24,6 +24,7 @@ class Cotizacion extends Model
     protected $fillable = [
         'cliente_id',
         'cliente_direccion_id',
+        'empresa_id',
         'nombre',
         'telefono',
         'email',
@@ -102,6 +103,11 @@ class Cotizacion extends Model
     public function clienteDireccion(): BelongsTo
     {
         return $this->belongsTo(ClienteDireccion::class);
+    }
+
+    public function empresa(): BelongsTo
+    {
+        return $this->belongsTo(Empresa::class);
     }
 
     public function trabajo(): HasOne
