@@ -91,14 +91,23 @@
                 <table>
                     <tr>
                         <td style="width: 46px;">
-                            <img class="logo" src="{{ public_path('images/isologo.png') }}" alt="Mallas Arica Jacob">
+                            <img class="logo" src="{{ public_path('images/isologo.png') }}" alt="{{ $empresa['nombre'] }}">
                         </td>
                         <td>
-                            <p class="brand-nombre">Mallas Arica Jacob</p>
-                            <p class="brand-sub">Instalación de mallas de protección · Arica</p>
+                            @php
+                                $lineaLegal = implode(' · ', array_filter([
+                                    ! empty($empresa['rut']) ? 'RUT '.$empresa['rut'] : null,
+                                    $empresa['direccion'] ?? null,
+                                ]));
+                                $lineaContacto = implode(' · ', array_filter([$empresa['telefono'] ?? null, $empresa['email'] ?? null]));
+                            @endphp
+                            <p class="brand-nombre">{{ $empresa['nombre'] }}</p>
+                            @if (! empty($empresa['subtitulo']))
+                                <p class="brand-sub">{{ $empresa['subtitulo'] }}</p>
+                            @endif
                             <p class="brand-datos">
-                                RUT {{ $empresa['rut'] }} · {{ $empresa['direccion'] }}<br>
-                                {{ $empresa['telefono'] }} · {{ $empresa['email'] }}
+                                {{ $lineaLegal }}@if ($lineaLegal && $lineaContacto)<br>@endif
+                                {{ $lineaContacto }}
                             </p>
                         </td>
                     </tr>
@@ -180,7 +189,7 @@
     </div>
 
     <p class="footer">
-        Mallas Arica Jacob · {{ $empresa['telefono'] }} · {{ $empresa['email'] }} · Gracias por su preferencia
+        {{ implode(' · ', array_filter([$empresa['nombre'], $empresa['telefono'] ?? null, $empresa['email'] ?? null, 'Gracias por su preferencia'])) }}
     </p>
 </body>
 </html>

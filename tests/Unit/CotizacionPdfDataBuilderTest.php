@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Cotizacion;
+use App\Models\Empresa;
 use App\Models\SiteContent;
 use App\Services\CotizacionPdfDataBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,6 +50,37 @@ class CotizacionPdfDataBuilderTest extends TestCase
         $datos = $this->builder->construir($cotizacion);
 
         $this->assertSame(str_pad((string) $cotizacion->id, 4, '0', STR_PAD_LEFT), $datos['folio']);
+    }
+
+    public function test_usa_la_empresa_elegida_en_la_cotizacion(): void
+    {
+        $otra = Empresa::create(['nombre' => 'Otra Empresa SpA', 'rut' => '76.123.456-7', 'email' => 'hola@otra.cl']);
+        $cotizacion = $this->cotizacionConItems();
+        $cotizacion->update(['empresa_id' => $otra->id]);
+
+        $datos = $this->builder->construir($cotizacion->fresh('items'));
+
+        $this->assertSame('Otra Empresa SpA', $datos['empresa']['nombre']);
+        $this->assertSame('76.123.456-7', $datos['empresa']['rut']);
+    }
+
+    public function test_sin_empresa_en_la_cotizacion_usa_la_predeterminada(): void
+    {
+        $cotizacion = $this->cotizacionConItems();
+        $cotizacion->update(['empresa_id' => null]);
+
+        $datos = $this->builder->construir($cotizacion->fresh('items'));
+
+        $this->assertSame(Empresa::predeterminada()->nombre, $datos['empresa']['nombre']);
+    }
+
+    public function test_sin_ninguna_empresa_cae_a_la_constante(): void
+    {
+        Empresa::query()->delete();
+
+        $datos = $this->builder->construir($this->cotizacionConItems());
+
+        $this->assertSame(CotizacionPdfDataBuilder::EMPRESA, $datos['empresa']);
     }
 
     public function test_lineas_libres_con_neto_iva_y_total(): void

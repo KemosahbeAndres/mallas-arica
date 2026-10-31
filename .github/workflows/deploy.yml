@@ -149,6 +149,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Guarda - el despliegue no puede resetear la base de producción
+        run: |
+          # El patrón se arma en pedazos para que este mismo archivo no lo contenga.
+          P='migrate:(fre''sh|refre''sh|re''set)|db:wi''pe|db:se''ed|--se''ed'
+          if grep -rEn "$P" .github/workflows docker deploy; then
+            echo "::error::Comando destructivo (reset/seed) en el pipeline o la imagen de despliegue."
+            exit 1
+          fi
+          echo "Sin comandos destructivos en el despliegue."
+
       - uses: docker/setup-buildx-action@v3
 
       - name: Build (sin push)
@@ -344,7 +354,15 @@ jobs:
             # --wait bloquea hasta que el healthcheck /up pase.
             docker compose up -d --wait --wait-timeout 120
 
+            # Respaldo previo a migrar (script de vpsa-infra, ver CLAUDE.md §7).
+            # No bloquea el deploy si falla, pero deja un warning visible.
+            /opt/infra/scripts/backup-app.sh appmallas \
+              || echo "::warning::No se pudo hacer el respaldo previo a las migraciones."
+
             # Migraciones: paso explícito y visible, no en el entrypoint.
+            # SOLO aplica las migraciones pendientes (aditivas); nunca resetea
+            # ni vuelve a sembrar la base. `--force` únicamente omite la
+            # confirmación interactiva que Laravel pide en producción.
             docker compose exec -T app php artisan migrate --force
 
             trap - ERR
