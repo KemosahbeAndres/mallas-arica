@@ -1,5 +1,11 @@
 # syntax=docker/dockerfile:1.7
 
+# Parche fijado a propósito (no usar la etiqueta flotante `8.4-fpm-alpine`): 8.4.27
+# corrige CVE-2026-109618/109619 (RCE sin autenticación, explotada en la red).
+# Subir este valor a mano en cada release de seguridad de PHP.
+# Debe ir antes del primer FROM para poder usarse en el FROM del runtime.
+ARG PHP_VERSION=8.4.27
+
 # ---------- Stage 1: dependencias PHP (sin dev) ----------
 FROM composer:2 AS vendor
 
@@ -29,15 +35,7 @@ COPY . .
 RUN npm run build
 
 # ---------- Stage 3: runtime ----------
-# Parche fijado a propósito (no usar la etiqueta flotante `8.4-fpm-alpine`): 8.4.27
-# corrige CVE-2026-109618/109619 (RCE sin autenticación, explotada en la red).
-# Subir este valor a mano en cada release de seguridad de PHP.
-ARG PHP_VERSION=8.4.27
 FROM php:${PHP_VERSION}-fpm-alpine AS runtime
-
-# Un ARG declarado antes del primer FROM se pierde dentro del stage: se
-# redeclara para poder usarlo en la guarda de abajo.
-ARG PHP_VERSION
 ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION}
 
