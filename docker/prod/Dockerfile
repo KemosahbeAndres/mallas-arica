@@ -29,10 +29,21 @@ COPY . .
 RUN npm run build
 
 # ---------- Stage 3: runtime ----------
-FROM php:8.4-fpm-alpine AS runtime
+# Parche fijado a propósito (no usar la etiqueta flotante `8.4-fpm-alpine`): 8.4.27
+# corrige CVE-2026-109618/109619 (RCE sin autenticación, explotada en la red).
+# Subir este valor a mano en cada release de seguridad de PHP.
+ARG PHP_VERSION=8.4.27
+FROM php:${PHP_VERSION}-fpm-alpine AS runtime
 
+# Un ARG declarado antes del primer FROM se pierde dentro del stage: se
+# redeclara para poder usarlo en la guarda de abajo.
+ARG PHP_VERSION
 ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION}
+
+# Guarda: el build falla si el PHP real es anterior al parche de seguridad.
+RUN php -r 'exit(version_compare(PHP_VERSION, "8.4.27", ">=") ? 0 : 1);' \
+    || { echo "PHP $(php -r 'echo PHP_VERSION;') < 8.4.27: vulnerable a CVE-2026-109618"; exit 1; }
 
 # Instalador oficial de extensiones: resuelve deps de compilación y limpia solo.
 COPY --from=mlocati/php-extension-installer:latest /usr/bin/install-php-extensions /usr/local/bin/
